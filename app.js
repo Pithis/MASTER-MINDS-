@@ -1,12 +1,12 @@
 // ============================================================
-// SNOOKER ALLEY — Full-Featured E-Commerce App
+// MASTERMINDZ SPORTZ — Full-Featured E-Commerce App
 // Local DB: IndexedDB | Auth + Email Verification | Admin Panel
 // ============================================================
 
 // ── IndexedDB Layer ──────────────────────────────────────────
 const DB = (() => {
   let db;
-  const DB_NAME = 'SnookerAlleyDB', DB_VER = 3;
+  const DB_NAME = 'MastermindzSportzDB', DB_VER = 3;
 
   function open() {
     return new Promise((res, rej) => {
@@ -244,10 +244,10 @@ function updateCartBadge() {
 // ── Seed Data ─────────────────────────────────────────────────
 const PRODUCTS = [
   { id: 'p1', name: 'Pro Tournament Cue', price: 149.99, category: 'Cues', badge: 'bestseller', rating: 4.8, reviews: 312, stock: 24, image: 'https://images.unsplash.com/photo-1544919982-b61976f0ba43?w=400&q=80', desc: 'Competition-grade 57" maple cue with 9.5mm tip. Used by professionals worldwide.' },
-  { id: 'p2', name: 'Snooker Ball Set (22)', price: 89.99, category: 'Balls', badge: 'new', rating: 4.9, reviews: 187, stock: 18, image: 'https://images.unsplash.com/photo-1585211969224-3e992986159d?w=400&q=80', desc: 'Full regulation set. Aramith crystal pro-quality resin balls for serious play.' },
+  { id: 'p2', name: 'Mastermindz sportz Ball Set (22)', price: 89.99, category: 'Balls', badge: 'new', rating: 4.9, reviews: 187, stock: 18, image: 'https://images.unsplash.com/photo-1585211969224-3e992986159d?w=400&q=80', desc: 'Full regulation set. Aramith crystal pro-quality resin balls for serious play.' },
   { id: 'p3', name: 'Billiard Table Cover', price: 59.99, category: 'Accessories', badge: '', rating: 4.6, reviews: 94, stock: 40, image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80', desc: 'Heavy-duty waterproof cover for 6–8 ft tables. Dustproof and UV-resistant.' },
   { id: 'p4', name: 'Cue Tip Kit (5pcs)', price: 19.99, category: 'Accessories', badge: 'sale', rating: 4.5, reviews: 210, stock: 120, image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&q=80', desc: 'Premium layered leather tips. Medium hardness. Includes cement and shaper tool.' },
-  { id: 'p5', name: 'Triangle Rack — Brass', price: 29.99, category: 'Accessories', badge: '', rating: 4.7, reviews: 78, stock: 55, image: 'https://images.unsplash.com/photo-1616137148867-ab5de281a6c7?w=400&q=80', desc: 'Solid brass frame ball rack for snooker and pool setups. Weighted base.' },
+  { id: 'p5', name: 'Triangle Rack — Brass', price: 29.99, category: 'Accessories', badge: '', rating: 4.7, reviews: 78, stock: 55, image: 'https://images.unsplash.com/photo-1616137148867-ab5de281a6c7?w=400&q=80', desc: 'Solid brass frame ball rack for Mastermindz sportz and pool setups. Weighted base.' },
   { id: 'p6', name: 'Cue Case — Leather 2B', price: 79.99, category: 'Cases', badge: 'new', rating: 4.8, reviews: 143, stock: 30, image: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400&q=80', desc: 'Full-grain leather 2-cue case. Padded interior, shoulder strap included.' },
 ];
 
@@ -286,9 +286,36 @@ let S = {
 function setState(patch) { Object.assign(S, patch); render(); }
 
 // ── Toast ─────────────────────────────────────────────────────
-function showToast(msg, type = 'success') {
-  S.toast = { msg, type }; render();
-  setTimeout(() => { S.toast = null; render(); }, 3500);
+function showToast(msg, type = 'success', image = null) {
+  const container = document.getElementById('toast-container') || (() => {
+    const c = document.createElement('div');
+    c.id = 'toast-container';
+    c.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;align-items:flex-end;';
+    document.body.appendChild(c);
+    return c;
+  })();
+
+  const t = document.createElement('div');
+  t.style.cssText = `
+    background:${type === 'error' ? '#b91c1c' : '#0f766e'};
+    color:white;padding:14px 20px;border-radius:16px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.2);
+    font-weight:700;font-size:14px;
+    max-width:320px;line-height:1.4;display:flex;align-items:center;gap:12px;
+  `;
+
+  let innerHTML = '';
+  if (image) {
+    innerHTML += `<img src="${image}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;flex-shrink:0;">`;
+  }
+  innerHTML += `<div>${msg}</div>`;
+  t.innerHTML = innerHTML;
+
+  container.appendChild(t);
+
+  setTimeout(() => {
+    t.remove();
+  }, 3500);
 }
 
 // ── Router ────────────────────────────────────────────────────
@@ -297,7 +324,12 @@ async function navigate(page) {
     if (!S.user || S.user.role !== 'admin') { showToast('Admin access required', 'error'); return; }
     await loadAdminData();
   }
+  if (page === 'cart') {
+    toggleCartDrawer(true);
+    return;
+  }
   if (page === 'orders' && !S.user) { setState({ modal: 'login' }); return; }
+
   S.page = page; render();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -316,12 +348,10 @@ function render() {
   const main = document.createElement('main');
   if (S.page === 'home') main.appendChild(renderHome());
   else if (S.page === 'shop') main.appendChild(renderShop());
-  else if (S.page === 'cart') main.appendChild(renderCart());
   else if (S.page === 'orders') main.appendChild(renderOrders());
   else if (S.page === 'admin') main.appendChild(renderAdmin());
   app.appendChild(main);
   if (S.modal) app.appendChild(renderModal(S.modal));
-  if (S.toast) app.appendChild(renderToast());
   lucide.createIcons();
   updateCartBadge();
 }
@@ -332,7 +362,7 @@ function renderNav() {
   const inner = el('div', 'nav-inner container');
 
   const logo = mkel('a', { class: 'nav-logo', href: '#' }, null, () => navigate('home'));
-  logo.innerHTML = 'SNOOKER<span>ALLEY</span>';
+  logo.innerHTML = '<img src="mmz%20logo%20fin%201.png" style="height:32px;margin-right:8px;vertical-align:middle;display:inline-block;">MASTERMINDZ <span style="color:var(--text);font-weight:400;">SPORTZ</span>';
 
   const links = el('div', 'nav-links');
   [['home', 'Home'], ['shop', 'Shop'], ['orders', 'My Orders']].forEach(([p, l]) => {
@@ -378,7 +408,7 @@ function renderHome() {
       <div class="hero-card">
         <div style="margin-bottom:16px"><span class="badge badge-emerald"><i data-lucide="zap" style="width:12px;height:12px"></i> NEW ARRIVALS</span></div>
         <h1 class="hero-title">Master<br>Your Game</h1>
-        <p class="hero-sub">Premium snooker &amp; billiards equipment. Trusted by champions, loved by enthusiasts worldwide.</p>
+        <p class="hero-sub">Premium Mastermindz sportz &amp; billiards equipment. Trusted by champions, loved by enthusiasts worldwide.</p>
         <div class="hero-actions">
           <button class="btn btn-primary" onclick="navigate('shop')"><i data-lucide="shopping-bag"></i> Shop Now</button>
           <button class="btn btn-ghost" onclick="navigate('shop')">View Catalog</button>
@@ -390,7 +420,7 @@ function renderHome() {
         </div>
       </div>
       <div class="hero-image">
-        <img src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=700&q=80" alt="Snooker Table" />
+        <img src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=700&q=80" alt="Mastermindz sportz Table" />
       </div>
     </div>`;
   heroSec.appendChild(hInner); frag.appendChild(heroSec);
@@ -440,6 +470,7 @@ function productCardHTML(p) {
       <div class="product-media" style="position:relative">
         <img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" />
         ${p.badge ? `<span class="badge ${badgeMap[p.badge] || 'badge-blue'}" style="position:absolute;top:12px;left:12px">${p.badge.toUpperCase()}</span>` : ''}
+        <button class="btn btn-primary quick-view-btn" onclick="openQuickView('${p.id}')">Quick View</button>
       </div>
       <div class="product-body">
         <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">${p.category}</div>
@@ -448,7 +479,7 @@ function productCardHTML(p) {
         <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">${p.desc.slice(0, 72)}…</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span class="product-price" style="font-size:20px">£${p.price.toFixed(2)}</span>
-          <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="addToCart('${p.id}')">
+          <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="addToCart('${p.id}', event)">
             <i data-lucide="shopping-cart" style="width:14px;height:14px"></i> Add
           </button>
         </div>
@@ -459,12 +490,12 @@ function productCardHTML(p) {
     </div>`;
 }
 
-function addToCart(id) {
+function addToCart(id, event) {
   const p = S.products.find(x => x.id === id);
   if (!p) return;
   if (p.stock <= 0) return showToast('Sorry, this item is out of stock!', 'error');
   Cart.add(p);
-  showToast(`${p.name} added to cart 🎱`);
+  showToast(`${p.name} added to cart 🎱`, 'success', p.image);
 }
 
 // ── Shop ──────────────────────────────────────────────────────
@@ -474,77 +505,117 @@ function renderShop() {
   const cats = ['All', ...new Set(prods.map(p => p.category))];
   const f = S.shopFilter || 'All';
   const filtered = f === 'All' ? prods : prods.filter(p => p.category === f);
+
+  // Calculate relative left offset for sliding tab roughly
+  const activeIdx = cats.indexOf(f);
+
   wrap.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px">
       <div><h2 class="title">Shop All Products</h2><p class="subtitle">${filtered.length} products found</p></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${cats.map(c => `<button class="btn ${f === c ? 'btn-primary' : 'btn-outline'}" style="padding:8px 14px;font-size:13px" onclick="setShopFilter('${c}')">${c}</button>`).join('')}
+      <div style="position:relative;display:flex;gap:8px;flex-wrap:wrap;background:white;padding:6px;border-radius:14px;border:1px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,0.02)">
+        <div class="tab-indicator" style="position:absolute;top:6px;bottom:6px;width:72px;background:var(--emerald);border-radius:10px;transition:0.3s cubic-bezier(0.4, 0, 0.2, 1);left:calc(6px + ${activeIdx * 80}px);z-index:0"></div>
+        ${cats.map(c => `<button class="btn" style="position:relative;z-index:1;padding:8px 18px;font-size:13px;background:transparent;box-shadow:none;border:none;min-width:72px;color:${f === c ? 'white' : 'var(--muted)'};transition:color 0.3s;" onclick="setShopFilter('${c}', event)">${c}</button>`).join('')}
       </div>
     </div>
-    <div class="grid grid-3">${filtered.map(productCardHTML).join('')}</div>`;
+    <div class="grid grid-3" id="shop-grid" style="position:relative">${filtered.length ? filtered.map(productCardHTML).join('') : Array(6).fill('<div class="card product-card" style="padding:20px"><div class="skeleton-shimmer" style="aspect-ratio:1/1;border-radius:16px;margin-bottom:20px"></div><div class="skeleton-shimmer" style="height:20px;width:70%;margin-bottom:8px"></div><div class="skeleton-shimmer" style="height:14px;width:40%"></div></div>').join('')}</div>`;
   return wrap;
 }
 
-function setShopFilter(f) { S.shopFilter = f; render(); }
+function setShopFilter(f, event) {
+  S.shopFilter = f; render();
+}
 
-// ── Cart ──────────────────────────────────────────────────────
-function renderCart() {
-  const wrap = el('div', 'container section');
+// ── Cart Drawer ───────────────────────────────────────────────
+function toggleCartDrawer(open) {
+  let d = document.getElementById('cart-drawer');
+  if (!d) {
+    d = document.createElement('div');
+    d.id = 'cart-drawer';
+    d.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;justify-content:flex-end;background:rgba(15, 23, 42, 0.45);backdrop-filter:blur(4px);';
+
+    const panel = document.createElement('div');
+    panel.id = 'cart-drawer-panel';
+    panel.className = 'cart-drawer-panel';
+    panel.style.cssText = 'width:min(440px, 100vw);background:white;height:100vh;box-shadow:-10px 0 40px rgba(0,0,0,0.1);display:flex;flex-direction:column;';
+
+    d.appendChild(panel);
+    document.body.appendChild(d);
+
+    d.addEventListener('click', e => { if (e.target === d) toggleCartDrawer(false); });
+  }
+
+  if (open) {
+    d.style.display = 'flex';
+    d.querySelector('#cart-drawer-panel').innerHTML = renderCartHTML();
+    lucide.createIcons();
+  } else {
+    d.style.display = 'none';
+  }
+}
+
+function renderCartHTML() {
   const items = Cart.get();
   if (!items.length) {
-    wrap.innerHTML = `<div style="text-align:center;padding:80px 20px">
-      <div style="font-size:72px;margin-bottom:16px">🎱</div>
-      <h2 style="margin:0 0 8px">Your cart is empty</h2>
-      <p style="color:var(--muted);margin-bottom:24px">Add some equipment to get started</p>
-      <button class="btn btn-primary" onclick="navigate('shop')">Browse Shop</button>
+    return `<div style="display:flex;flex-direction:column;height:100%">
+      <div style="padding:24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;font-size:20px">Your Cart</h2>
+        <button class="btn" style="padding:6px;background:#f1f5f9;border-radius:8px" onclick="toggleCartDrawer(false)">✕</button>
+      </div>
+      <div style="text-align:center;padding:80px 20px;flex:1;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:72px;margin-bottom:16px">🎱</div>
+        <h3 style="margin:0 0 8px">Your cart is empty</h3>
+        <p style="color:var(--muted);margin-bottom:24px">Add some equipment to get started</p>
+        <button class="btn btn-primary" onclick="toggleCartDrawer(false); navigate('shop')">Browse Shop</button>
+      </div>
     </div>`;
-    return wrap;
   }
+
   const sub = Cart.total(), ship = sub > 75 ? 0 : 6.99, total = sub + ship;
-  wrap.innerHTML = `
-    <h2 class="title" style="margin-bottom:24px">Shopping Cart <span style="color:var(--muted);font-size:18px">(${Cart.count()} items)</span></h2>
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start">
-      <div class="card" style="overflow:hidden">
+  return `
+    <div style="display:flex;flex-direction:column;height:100%">
+      <div style="padding:24px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;font-size:20px">Your Cart <span style="color:var(--muted);font-size:14px;font-weight:600">(${Cart.count()} items)</span></h2>
+        <button class="btn" style="padding:6px;background:#f1f5f9;border-radius:8px" onclick="toggleCartDrawer(false)">✕</button>
+      </div>
+      
+      <div style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;">
         ${items.map(item => `
-          <div style="display:flex;gap:16px;padding:20px;border-bottom:1px solid var(--line);align-items:center">
-            <img src="${item.image}" style="width:80px;height:80px;border-radius:12px;object-fit:cover" />
+          <div style="display:flex;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--line);align-items:center">
+            <img src="${item.image}" style="width:72px;height:72px;border-radius:12px;object-fit:cover" />
             <div style="flex:1">
-              <div style="font-weight:700;margin-bottom:2px">${item.name}</div>
-              <div style="color:var(--muted);font-size:13px">${item.category}</div>
-              <div style="color:var(--emerald);font-weight:800;font-size:18px">£${item.price.toFixed(2)}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn btn-outline" style="padding:6px 10px;border-radius:8px" onclick="cartUpdate('${item.id}',${item.qty - 1})">−</button>
-              <span style="font-weight:700;min-width:24px;text-align:center">${item.qty}</span>
-              <button class="btn btn-outline" style="padding:6px 10px;border-radius:8px" onclick="cartUpdate('${item.id}',${item.qty + 1})">+</button>
-              <button class="btn" style="padding:6px 10px;background:#fee2e2;color:#b91c1c;border-radius:8px;margin-left:6px" onclick="cartRemove('${item.id}')">
-                <i data-lucide="trash-2" style="width:14px;height:14px"></i>
-              </button>
+              <div style="font-weight:700;margin-bottom:2px;font-size:14px">${item.name}</div>
+              <div style="color:var(--emerald);font-weight:800;font-size:16px;margin-bottom:8px">£${item.price.toFixed(2)}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button class="btn btn-outline" style="padding:4px 8px;border-radius:6px;font-size:12px" onclick="cartUpdate('${item.id}',${item.qty - 1})">−</button>
+                <span style="font-weight:700;min-width:20px;text-align:center;font-size:13px">${item.qty}</span>
+                <button class="btn btn-outline" style="padding:4px 8px;border-radius:6px;font-size:12px" onclick="cartUpdate('${item.id}',${item.qty + 1})">+</button>
+                <button class="btn" style="padding:4px 8px;background:#fee2e2;color:#b91c1c;border-radius:6px;margin-left:6px" onclick="cartRemove('${item.id}')">
+                  <i data-lucide="trash-2" style="width:12px;height:12px"></i>
+                </button>
+              </div>
             </div>
           </div>`).join('')}
       </div>
-      <div class="card" style="padding:24px">
-        <h3 style="margin:0 0 20px;font-size:18px">Order Summary</h3>
-        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px">
+      
+      <div style="padding:24px;background:#f8fafc;border-top:1px solid var(--line);">
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;margin-bottom:20px">
           <div style="display:flex;justify-content:space-between"><span>Subtotal</span><strong>£${sub.toFixed(2)}</strong></div>
           <div style="display:flex;justify-content:space-between"><span>Shipping</span><strong style="color:${ship === 0 ? 'var(--emerald)' : 'inherit'}">${ship === 0 ? 'FREE' : '£' + ship.toFixed(2)}</strong></div>
-          ${ship > 0 ? `<div style="font-size:11px;color:var(--muted)">Add £${(75 - sub).toFixed(2)} more for free shipping</div>` : ''}
-          <hr style="border:none;border-top:1px solid var(--line)">
+          <hr style="border:none;border-top:1px dashed var(--line);margin:4px 0">
           <div style="display:flex;justify-content:space-between;font-size:18px"><strong>Total</strong><strong style="color:var(--emerald)">£${total.toFixed(2)}</strong></div>
         </div>
-        <button class="btn btn-primary" style="width:100%;margin-top:20px;padding:14px" onclick="doCheckout()">
-          <i data-lucide="credit-card"></i> Checkout Now
+        <button class="btn btn-primary" style="width:100%;padding:16px;font-size:16px;box-shadow:0 10px 20px rgba(15,118,110,0.2)" onclick="doCheckout()">
+          <i data-lucide="credit-card"></i> Proceed to Checkout
         </button>
-        <button class="btn btn-outline" style="width:100%;margin-top:8px" onclick="navigate('shop')">Continue Shopping</button>
       </div>
     </div>`;
-  return wrap;
 }
 
-function cartUpdate(id, qty) { Cart.update(id, qty); render(); }
-function cartRemove(id) { Cart.remove(id); render(); }
+function cartUpdate(id, qty) { Cart.update(id, qty); document.getElementById('cart-drawer-panel').innerHTML = renderCartHTML(); lucide.createIcons(); }
+function cartRemove(id) { Cart.remove(id); document.getElementById('cart-drawer-panel').innerHTML = renderCartHTML(); lucide.createIcons(); }
 
 function doCheckout() {
+  toggleCartDrawer(false);
   if (!S.user) { setState({ modal: 'login' }); return; }
   setState({ modal: 'checkout' });
 }
@@ -594,7 +665,7 @@ function renderAdmin() {
   const sidebar = el('div', 'sidebar');
   const logo = el('div', 'nav-logo');
   logo.style.marginBottom = '32px';
-  logo.innerHTML = 'SNOOKER<span>ALLEY</span>';
+  logo.innerHTML = '<img src="mmz%20logo%20fin%201.png" style="height:24px;margin-right:8px;vertical-align:middle;display:inline-block;">MASTERMINDZ<br><span style="color:var(--text);font-weight:400;font-size:16px;">SPORTZ</span>';
   sidebar.appendChild(logo);
 
   [['dashboard', 'layout-dashboard', 'Dashboard'],
@@ -656,17 +727,17 @@ function renderAdminDashboard() {
   const statsGrid = document.createElement('div');
   statsGrid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px';
   [
-    ['Daily Revenue', `£${dailyRev.toFixed(2)}`, 'calendar', '#ecfdf5', '#059669'],
-    ['Monthly Revenue', `£${monthRev.toFixed(2)}`, 'pie-chart', '#fefce8', '#ca8a04'],
-    ['Total Revenue', `£${revenue.toFixed(2)}`, 'trending-up', '#d1fae5', '#065f46'],
-    ['Total Orders', orders.length, 'package', '#dbeafe', '#1e40af'],
-  ].forEach(([label, val, icon, bg, color]) => {
+    ['Daily Revenue', dailyRev, 'calendar', '#ecfdf5', '#059669', true],
+    ['Monthly Revenue', monthRev, 'pie-chart', '#fefce8', '#ca8a04', true],
+    ['Total Revenue', revenue, 'trending-up', '#d1fae5', '#065f46', true],
+    ['Total Orders', orders.length, 'package', '#dbeafe', '#1e40af', false],
+  ].forEach(([label, val, icon, bg, color, isCurrency]) => {
     const c = document.createElement('div');
     c.className = 'card'; c.style.padding = '20px';
     c.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
         <div style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:0.08em;margin-bottom:8px">${label}</div>
-        <div style="font-size:24px;font-weight:800">${val}</div>
+        <div class="admin-counter" data-val="${val}" data-curr="${isCurrency}" style="font-size:24px;font-weight:800">${isCurrency ? '£0.00' : '0'}</div>
       </div>
       <div style="width:40px;height:40px;background:${bg};border-radius:12px;display:grid;place-items:center;color:${color}">
         <i data-lucide="${icon}" style="width:18px;height:18px"></i>
@@ -798,7 +869,7 @@ function adminExportData() {
   const a = document.createElement('a');
   a.setAttribute('hidden', '');
   a.setAttribute('href', url);
-  a.setAttribute('download', `SnookerAlley_Orders_${new Date().toISOString().slice(0, 10)}.csv`);
+  a.setAttribute('download', `MastermindzSportz_Orders_${new Date().toISOString().slice(0, 10)}.csv`);
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -983,7 +1054,7 @@ function openUserMenu(e, email, newRole) {
 function renderModal(type) {
   const overlay = document.createElement('div');
   overlay.className = 'modal';
-  overlay.addEventListener('click', e => { if (e.target === overlay) setState({ modal: null }); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) setState({ modal: null, activeProduct: null }); });
   let card;
   if (type === 'login') card = buildLoginModal();
   else if (type === 'register') card = buildRegisterModal();
@@ -991,6 +1062,7 @@ function renderModal(type) {
   else if (type === 'checkout') card = buildCheckoutModal();
   else if (type === 'profile') card = buildProfileModal();
   else if (type === 'product') card = buildProductModal();
+  else if (type === 'quickview') card = buildQuickViewModal();
   if (card) overlay.appendChild(card);
   return overlay;
 }
@@ -1000,8 +1072,46 @@ function closeBtn() {
   b.className = 'btn';
   b.style.cssText = 'background:#f1f5f9;padding:8px;border-radius:12px';
   b.innerHTML = '<i data-lucide="x" style="width:18px;height:18px"></i>';
-  b.addEventListener('click', () => setState({ modal: null }));
+  b.addEventListener('click', () => setState({ modal: null, activeProduct: null }));
   return b;
+}
+
+function openQuickView(id) {
+  S.activeProduct = S.products.find(p => p.id === id);
+  if (S.activeProduct) setState({ modal: 'quickview' });
+}
+
+function buildQuickViewModal() {
+  const p = S.activeProduct;
+  if (!p) return null;
+  const card = document.createElement('div');
+  card.className = 'modal-card';
+  card.style.cssText = 'width:min(900px, 95vw);padding:0;overflow:hidden;background:#fff;border-radius:24px;display:grid;grid-template-columns:1fr 1fr;';
+
+  if (window.innerWidth < 768) {
+    card.style.gridTemplateColumns = '1fr';
+  }
+
+  card.innerHTML = `
+    <div style="background:#f8fafc;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;">
+      <img src="${p.image}" style="width:100%;object-fit:cover;border-radius:16px;">
+      <button class="btn" style="position:absolute;top:16px;left:16px;background:white;padding:8px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1)" onclick="setState({modal:null, activeProduct:null})">✕</button>
+    </div>
+    <div style="padding:40px;display:flex;flex-direction:column;justify-content:center">
+      <div style="font-size:12px;color:var(--emerald);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;font-weight:800">${p.category}</div>
+      <h2 style="margin:0 0 16px;font-size:32px">${p.name}</h2>
+      <div style="font-size:16px;color:#f59e0b;margin-bottom:20px">★ ${p.rating} <span style="color:var(--muted)">(${p.reviews} reviews)</span></div>
+      <div style="font-size:15px;color:var(--muted);line-height:1.6;margin-bottom:24px">${p.desc}</div>
+      <div style="font-size:28px;font-weight:800;color:var(--emerald);margin-bottom:24px">£${p.price.toFixed(2)}</div>
+      <button class="btn btn-primary" style="padding:16px;font-size:16px" onclick="addToCart('${p.id}', event); setState({modal:null, activeProduct:null})">
+        <i data-lucide="shopping-cart"></i> Add to Cart
+      </button>
+      <div style="margin-top:16px;font-size:13px;color:${p.stock < 10 ? 'var(--red)' : 'var(--emerald)'};text-align:center">
+        ${p.stock < 10 ? '⚠ Only ' + p.stock + ' units left in stock!' : '✓ In Stock and ready to ship'}
+      </div>
+    </div>
+  `;
+  return card;
 }
 
 function buildLoginModal() {
@@ -1320,18 +1430,7 @@ function buildProfileModal() {
 }
 
 function renderToast() {
-  const { msg, type } = S.toast;
-  const t = document.createElement('div');
-  t.style.cssText = `
-    position:fixed;bottom:24px;right:24px;z-index:9999;
-    background:${type === 'error' ? '#b91c1c' : '#0f766e'};
-    color:white;padding:14px 20px;border-radius:16px;
-    box-shadow:0 8px 24px rgba(0,0,0,0.2);
-    font-weight:700;font-size:14px;
-    animation:slideUp 0.3s ease;
-    max-width:320px;line-height:1.4;`;
-  t.textContent = msg;
-  return t;
+  return null;
 }
 
 // ── Action Handlers ───────────────────────────────────────────
@@ -1464,7 +1563,8 @@ async function doPlaceOrder() {
   S.modal = null;
   S.userOrders = await DB.getAll('orders', 'userId', S.user.id);
   navigate('orders');
-  showToast('Order placed successfully! 📦');
+
+  showToast('Order placed successfully! 📦', 'success');
 }
 
 async function doLogout() {
