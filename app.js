@@ -1,0 +1,1533 @@
+// ============================================================
+// SNOOKER ALLEY — Full-Featured E-Commerce App
+// Local DB: IndexedDB | Auth + Email Verification | Admin Panel
+// ============================================================
+
+// ── IndexedDB Layer ──────────────────────────────────────────
+const DB = (() => {
+  let db;
+  const DB_NAME = 'SnookerAlleyDB', DB_VER = 3;
+
+  function open() {
+    return new Promise((res, rej) => {
+      if (db) return res(db);
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains('users')) {
+          const us = d.createObjectStore('users', { keyPath: 'id', autoIncrement: true });
+          us.createIndex('email', 'email', { unique: true });
+        }
+        if (!d.objectStoreNames.contains('orders')) {
+          const os = d.createObjectStore('orders', { keyPath: 'id', autoIncrement: true });
+          os.createIndex('userId', 'userId');
+          os.createIndex('status', 'status');
+        }
+        if (!d.objectStoreNames.contains('products')) {
+          d.createObjectStore('products', { keyPath: 'id' });
+        }
+        if (!d.objectStoreNames.contains('verifications')) {
+          d.createObjectStore('verifications', { keyPath: 'email' });
+        }
+        if (!d.objectStoreNames.contains('sessions')) {
+          d.createObjectStore('sessions', { keyPath: 'token' });
+        }
+      };
+      req.onsuccess = e => { db = e.target.result; res(db); };
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  async function getAll(store, indexName, key) {
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, 'readonly');
+      const s = t.objectStore(store);
+      const req = indexName ? s.index(indexName).getAll(key) : s.getAll();
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  async function get(store, key) {
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, 'readonly');
+      const req = t.objectStore(store).get(key);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  async function put(store, val) {
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, 'readwrite');
+      const req = t.objectStore(store).put(val);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  async function del(store, key) {
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, 'readwrite');
+      const req = t.objectStore(store).delete(key);
+      req.onsuccess = () => res();
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  async function getByIndex(store, index, key) {
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, 'readonly');
+      const req = t.objectStore(store).index(index).get(key);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  async function clear(store) {
+    const d = await open();
+    return new Promise((res, rej) => {
+      const t = d.transaction(store, 'readwrite');
+      const req = t.objectStore(store).clear();
+      req.onsuccess = () => res();
+      req.onerror = () => rej(req.error);
+    });
+  }
+
+  return { open, put, get, del, getAll, getByIndex, clear };
+})();
+
+// ── Auth ─────────────────────────────────────────────────────
+const Auth = (() => {
+  function genToken() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+  function genCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+  function hashPass(p) {
+    // Better hash implementation for a client-side demo (still not production secure)
+    let h1 = 0xdeadbeef ^ p.length, h2 = 0x41c6ce57 ^ p.length;
+    for (let i = 0, ch; i < p.length; i++) {
+      ch = p.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  }
+
+  async function currentUser() {
+    const token = localStorage.getItem('sa_token');
+    if (!token) return null;
+    const session = await DB.get('sessions', token);
+    if (!session || session.exp < Date.now()) { localStorage.removeItem('sa_token'); return null; }
+    return DB.get('users', session.userId);
+  }
+
+  async function register({ name, email, password, phone }) {
+    const exists = await DB.getByIndex('users', 'email', email);
+    if (exists) throw new Error('Email already registered');
+    const code = genCode();
+    await DB.put('verifications', {
+      email, code, exp: Date.now() + 15 * 60 * 1000,
+      name, password: hashPass(password), phone
+    });
+    return code;
+  }
+
+  async function verify(email, code) {
+    const v = await DB.get('verifications', email);
+    if (!v) throw new Error('No pending verification for this email');
+    if (v.exp < Date.now()) throw new Error('Code expired. Please register again.');
+    if (v.code !== code) throw new Error('Invalid code. Please try again.');
+    const userId = await DB.put('users', {
+      name: v.name, email, password: v.password, phone: v.phone,
+      role: 'customer', verified: true,
+      createdAt: new Date().toISOString(),
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(v.name)}&background=0f766e&color=fff`
+    });
+    await DB.del('verifications', email);
+    // Create session
+    const token = genToken();
+    await DB.put('sessions', { token, userId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+    localStorage.setItem('sa_token', token);
+    return await DB.get('users', userId);
+  }
+
+  async function login(email, password) {
+    const user = await DB.getByIndex('users', 'email', email);
+    if (!user) throw new Error('No account found with this email');
+    if (!user.verified) throw new Error('Please verify your email first');
+    if (user.password !== hashPass(password)) throw new Error('Incorrect password');
+    const token = genToken();
+    await DB.put('sessions', { token, userId: user.id, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+    localStorage.setItem('sa_token', token);
+    return user;
+  }
+
+  async function logout() {
+    const token = localStorage.getItem('sa_token');
+    if (token) await DB.del('sessions', token).catch(() => { });
+    localStorage.removeItem('sa_token');
+  }
+
+  return { currentUser, register, verify, login, logout, hashPass };
+})();
+// ── Google Authentication ─────────────────────────────
+async function googleLoginHandler(response) {
+  const data = JSON.parse(atob(response.credential.split('.')[1]));
+  const email = data.email;
+  const name = data.name;
+  const avatar = data.picture;
+
+  let user = await DB.getByIndex('users', 'email', email);
+
+  if (!user) {
+    const userId = await DB.put('users', {
+      name, email, password: null, phone: "",
+      role: "customer", verified: true,
+      createdAt: new Date().toISOString(), avatar
+    });
+    user = await DB.get('users', userId);
+  }
+
+  if (email === "tobi268820@gmail.com" && user.role !== "admin") {
+    user.role = "admin";
+    await DB.put("users", user);
+  }
+
+  const token = Auth.genToken ? Auth.genToken() : Math.random().toString(36).slice(2);
+  await DB.put('sessions', { token, userId: user.id, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+  localStorage.setItem("sa_token", token);
+
+  S.user = user;
+  S.userOrders = await DB.getAll('orders', 'userId', user.id);
+  S.modal = null;
+  showToast("Signed in with Google 🎱");
+  render();
+}
+
+// ── Cart ─────────────────────────────────────────────────────
+const Cart = (() => {
+  let items = [];
+  try { items = JSON.parse(localStorage.getItem('sa_cart') || '[]'); } catch (e) { items = []; }
+  const save = () => localStorage.setItem('sa_cart', JSON.stringify(items));
+  const get = () => items;
+  const add = (product, qty = 1) => {
+    const idx = items.findIndex(i => i.id === product.id);
+    if (idx > -1) items[idx].qty += qty; else items.push({ ...product, qty });
+    save(); updateCartBadge();
+  };
+  const remove = id => { items = items.filter(i => i.id !== id); save(); updateCartBadge(); };
+  const update = (id, qty) => {
+    if (qty < 1) { remove(id); return; }
+    const idx = items.findIndex(i => i.id === id);
+    if (idx > -1) items[idx].qty = qty; save(); updateCartBadge();
+  };
+  const clear = () => { items = []; save(); updateCartBadge(); };
+  const total = () => items.reduce((s, i) => s + i.price * i.qty, 0);
+  const count = () => items.reduce((s, i) => s + i.qty, 0);
+  return { get, add, remove, update, clear, total, count };
+})();
+
+function updateCartBadge() {
+  const b = document.getElementById('cart-badge');
+  if (!b) return;
+  const c = Cart.count();
+  b.textContent = c;
+  b.style.display = c ? 'flex' : 'none';
+}
+
+// ── Seed Data ─────────────────────────────────────────────────
+const PRODUCTS = [
+  { id: 'p1', name: 'Pro Tournament Cue', price: 149.99, category: 'Cues', badge: 'bestseller', rating: 4.8, reviews: 312, stock: 24, image: 'https://images.unsplash.com/photo-1544919982-b61976f0ba43?w=400&q=80', desc: 'Competition-grade 57" maple cue with 9.5mm tip. Used by professionals worldwide.' },
+  { id: 'p2', name: 'Snooker Ball Set (22)', price: 89.99, category: 'Balls', badge: 'new', rating: 4.9, reviews: 187, stock: 18, image: 'https://images.unsplash.com/photo-1585211969224-3e992986159d?w=400&q=80', desc: 'Full regulation set. Aramith crystal pro-quality resin balls for serious play.' },
+  { id: 'p3', name: 'Billiard Table Cover', price: 59.99, category: 'Accessories', badge: '', rating: 4.6, reviews: 94, stock: 40, image: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80', desc: 'Heavy-duty waterproof cover for 6–8 ft tables. Dustproof and UV-resistant.' },
+  { id: 'p4', name: 'Cue Tip Kit (5pcs)', price: 19.99, category: 'Accessories', badge: 'sale', rating: 4.5, reviews: 210, stock: 120, image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&q=80', desc: 'Premium layered leather tips. Medium hardness. Includes cement and shaper tool.' },
+  { id: 'p5', name: 'Triangle Rack — Brass', price: 29.99, category: 'Accessories', badge: '', rating: 4.7, reviews: 78, stock: 55, image: 'https://images.unsplash.com/photo-1616137148867-ab5de281a6c7?w=400&q=80', desc: 'Solid brass frame ball rack for snooker and pool setups. Weighted base.' },
+  { id: 'p6', name: 'Cue Case — Leather 2B', price: 79.99, category: 'Cases', badge: 'new', rating: 4.8, reviews: 143, stock: 30, image: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400&q=80', desc: 'Full-grain leather 2-cue case. Padded interior, shoulder strap included.' },
+];
+
+async function seedData() {
+  // Clear data as requested for a fresh start
+  await DB.clear('users');
+  await DB.clear('orders');
+  await DB.clear('sessions');
+  await DB.clear('verifications');
+
+  const existing = await DB.getAll('products');
+  if (!existing.length) {
+    for (const p of PRODUCTS) await DB.put('products', p);
+  }
+
+  const adminData = {
+    name: 'Admin Tobi', email: 'tobi268820@gmail.com',
+    password: Auth.hashPass('Admin123'), phone: '+44 7000 000000',
+    role: 'admin', verified: true,
+    createdAt: new Date().toISOString(),
+    avatar: 'https://ui-avatars.com/api/?name=Tobi&background=0f766e&color=fff'
+  };
+  await DB.put('users', adminData);
+}
+
+// ── State ─────────────────────────────────────────────────────
+let S = {
+  user: null, page: 'home', modal: null,
+  products: [], orders: [], users: [],
+  userOrders: [],
+  pendingVerify: null,
+  toast: null, adminTab: 'dashboard',
+  shopFilter: 'All'
+};
+
+function setState(patch) { Object.assign(S, patch); render(); }
+
+// ── Toast ─────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  S.toast = { msg, type }; render();
+  setTimeout(() => { S.toast = null; render(); }, 3500);
+}
+
+// ── Router ────────────────────────────────────────────────────
+async function navigate(page) {
+  if (page === 'admin') {
+    if (!S.user || S.user.role !== 'admin') { showToast('Admin access required', 'error'); return; }
+    await loadAdminData();
+  }
+  if (page === 'orders' && !S.user) { setState({ modal: 'login' }); return; }
+  S.page = page; render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function loadAdminData() {
+  S.orders = await DB.getAll('orders');
+  S.users = await DB.getAll('users');
+  S.products = await DB.getAll('products');
+}
+
+// ── Render ────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  if (S.page !== 'admin') app.appendChild(renderNav());
+  const main = document.createElement('main');
+  if (S.page === 'home') main.appendChild(renderHome());
+  else if (S.page === 'shop') main.appendChild(renderShop());
+  else if (S.page === 'cart') main.appendChild(renderCart());
+  else if (S.page === 'orders') main.appendChild(renderOrders());
+  else if (S.page === 'admin') main.appendChild(renderAdmin());
+  app.appendChild(main);
+  if (S.modal) app.appendChild(renderModal(S.modal));
+  if (S.toast) app.appendChild(renderToast());
+  lucide.createIcons();
+  updateCartBadge();
+}
+
+// ── Nav ───────────────────────────────────────────────────────
+function renderNav() {
+  const nav = el('nav', 'nav');
+  const inner = el('div', 'nav-inner container');
+
+  const logo = mkel('a', { class: 'nav-logo', href: '#' }, null, () => navigate('home'));
+  logo.innerHTML = 'SNOOKER<span>ALLEY</span>';
+
+  const links = el('div', 'nav-links');
+  [['home', 'Home'], ['shop', 'Shop'], ['orders', 'My Orders']].forEach(([p, l]) => {
+    const a = mkel('a', { class: 'nav-link', href: '#' }, l, () => navigate(p));
+    links.appendChild(a);
+  });
+  if (S.user?.role === 'admin') {
+    const a = mkel('a', { class: 'nav-link', href: '#', style: 'color:var(--emerald)' }, '⚙ Admin', () => navigate('admin'));
+    links.appendChild(a);
+  }
+
+  const actions = el('div', 'nav-actions');
+  const cartWrap = el('div', '', { position: 'relative' });
+  const cartBtn = mkel('button', { class: 'btn btn-outline', style: 'padding:10px 14px' }, '<i data-lucide="shopping-cart"></i>', () => navigate('cart'));
+  cartBtn.innerHTML = '<i data-lucide="shopping-cart"></i>';
+  const badge = mkel('span', { id: 'cart-badge', class: 'nav-badge', style: `display:${Cart.count() ? 'flex' : 'none'}` }, Cart.count());
+  cartWrap.appendChild(cartBtn); cartWrap.appendChild(badge); actions.appendChild(cartWrap);
+
+  if (S.user) {
+    const av = mkel('img', { src: S.user.avatar, style: 'width:36px;height:36px;border-radius:50%;object-fit:cover;cursor:pointer' }, null, () => setState({ modal: 'profile' }));
+    const lb = mkel('button', { class: 'btn', style: 'background:#f1f5f9;color:#64748b;padding:8px 12px;border-radius:999px' }, '<i data-lucide="log-out"></i>', doLogout);
+    lb.innerHTML = '<i data-lucide="log-out"></i>';
+    actions.appendChild(av); actions.appendChild(lb);
+  } else {
+    const si = mkel('button', { class: 'btn btn-outline' }, 'Sign In', () => setState({ modal: 'login' }));
+    const reg = mkel('button', { class: 'btn btn-primary' }, 'Register', () => setState({ modal: 'register' }));
+    actions.appendChild(si); actions.appendChild(reg);
+  }
+
+  inner.appendChild(logo); inner.appendChild(links); inner.appendChild(actions);
+  nav.appendChild(inner);
+  return nav;
+}
+
+// ── Home ──────────────────────────────────────────────────────
+function renderHome() {
+  const frag = document.createDocumentFragment();
+
+  const heroSec = el('section', 'section');
+  const hInner = el('div', 'container');
+  hInner.innerHTML = `
+    <div class="hero">
+      <div class="hero-card">
+        <div style="margin-bottom:16px"><span class="badge badge-emerald"><i data-lucide="zap" style="width:12px;height:12px"></i> NEW ARRIVALS</span></div>
+        <h1 class="hero-title">Master<br>Your Game</h1>
+        <p class="hero-sub">Premium snooker &amp; billiards equipment. Trusted by champions, loved by enthusiasts worldwide.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" onclick="navigate('shop')"><i data-lucide="shopping-bag"></i> Shop Now</button>
+          <button class="btn btn-ghost" onclick="navigate('shop')">View Catalog</button>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card"><strong>2,400+</strong><span style="font-size:12px;color:#94a3b8">Products</span></div>
+          <div class="stat-card"><strong>98%</strong><span style="font-size:12px;color:#94a3b8">Satisfaction</span></div>
+          <div class="stat-card"><strong>48hr</strong><span style="font-size:12px;color:#94a3b8">Delivery</span></div>
+        </div>
+      </div>
+      <div class="hero-image">
+        <img src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=700&q=80" alt="Snooker Table" />
+      </div>
+    </div>`;
+  heroSec.appendChild(hInner); frag.appendChild(heroSec);
+
+  const featSec = el('section', 'section');
+  const fI = el('div', 'container');
+  fI.innerHTML = `<div class="feature-list">
+    ${[['truck', 'Free Shipping', 'On orders over £75'], ['shield-check', 'Authentic Gear', '100% genuine products'], ['rotate-ccw', 'Easy Returns', '30-day hassle-free'], ['headphones', 'Expert Support', 'Mon–Sat 9am–6pm']].map(([ic, t, s]) => `
+    <div class="feature"><div class="feature-icon"><i data-lucide="${ic}" style="width:20px;height:20px"></i></div>
+    <div><div style="font-weight:700;font-size:14px">${t}</div><div style="font-size:12px;color:var(--muted)">${s}</div></div></div>`).join('')}
+  </div>`;
+  featSec.appendChild(fI); frag.appendChild(featSec);
+
+  const prodSec = el('section', 'section');
+  const pI = el('div', 'container');
+  pI.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px">
+      <div><h2 class="title">Featured Products</h2><p class="subtitle">Handpicked by our experts</p></div>
+      <button class="btn btn-outline" onclick="navigate('shop')">View All <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
+    </div>
+    <div class="grid grid-3">${(S.products || []).slice(0, 3).map(productCardHTML).join('')}</div>`;
+  prodSec.appendChild(pI); frag.appendChild(prodSec);
+
+  const ctaSec = el('section', 'section');
+  const cI = el('div', 'container');
+  cI.innerHTML = `<div class="cta">
+    <div style="max-width:540px;position:relative;z-index:1">
+      <span class="badge badge-emerald" style="margin-bottom:16px">Newsletter</span>
+      <h2 style="font-family:'Bebas Neue',serif;font-size:clamp(28px,4vw,44px);margin:0 0 12px;letter-spacing:0.02em">GET 10% OFF YOUR FIRST ORDER</h2>
+      <p style="color:rgba(255,255,255,0.75);margin-bottom:24px">Subscribe for exclusive deals, pro tips, and tournament news.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <input class="input" id="nl-email" placeholder="Your email address" style="max-width:280px;background:rgba(255,255,255,0.12);color:white;border-color:rgba(255,255,255,0.2)" />
+        <button class="btn btn-primary" onclick="showToast('Thanks! Your 10% code has been sent 🎱')">Subscribe</button>
+      </div>
+    </div>
+  </div>`;
+  ctaSec.appendChild(cI); frag.appendChild(ctaSec);
+
+  return frag;
+}
+
+function productCardHTML(p) {
+  const stars = '★'.repeat(Math.floor(p.rating)) + '☆'.repeat(5 - Math.floor(p.rating));
+  const badgeMap = { bestseller: 'badge-emerald', new: 'badge-blue', sale: 'badge-amber' };
+  return `
+    <div class="card product-card">
+      <div class="product-media" style="position:relative">
+        <img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" />
+        ${p.badge ? `<span class="badge ${badgeMap[p.badge] || 'badge-blue'}" style="position:absolute;top:12px;left:12px">${p.badge.toUpperCase()}</span>` : ''}
+      </div>
+      <div class="product-body">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">${p.category}</div>
+        <div class="product-title">${p.name}</div>
+        <div style="font-size:12px;color:#f59e0b;margin:4px 0">${stars} <span style="color:var(--muted)">(${p.reviews})</span></div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">${p.desc.slice(0, 72)}…</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="product-price" style="font-size:20px">£${p.price.toFixed(2)}</span>
+          <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="addToCart('${p.id}')">
+            <i data-lucide="shopping-cart" style="width:14px;height:14px"></i> Add
+          </button>
+        </div>
+        <div style="font-size:11px;color:${p.stock < 10 ? 'var(--red)' : 'var(--emerald)'};margin-top:6px">
+          ${p.stock < 10 ? `⚠ Only ${p.stock} left` : `✓ ${p.stock} in stock`}
+        </div>
+      </div>
+    </div>`;
+}
+
+function addToCart(id) {
+  const p = S.products.find(x => x.id === id);
+  if (!p) return;
+  if (p.stock <= 0) return showToast('Sorry, this item is out of stock!', 'error');
+  Cart.add(p);
+  showToast(`${p.name} added to cart 🎱`);
+}
+
+// ── Shop ──────────────────────────────────────────────────────
+function renderShop() {
+  const wrap = el('div', 'container section');
+  const prods = S.products || [];
+  const cats = ['All', ...new Set(prods.map(p => p.category))];
+  const f = S.shopFilter || 'All';
+  const filtered = f === 'All' ? prods : prods.filter(p => p.category === f);
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px">
+      <div><h2 class="title">Shop All Products</h2><p class="subtitle">${filtered.length} products found</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${cats.map(c => `<button class="btn ${f === c ? 'btn-primary' : 'btn-outline'}" style="padding:8px 14px;font-size:13px" onclick="setShopFilter('${c}')">${c}</button>`).join('')}
+      </div>
+    </div>
+    <div class="grid grid-3">${filtered.map(productCardHTML).join('')}</div>`;
+  return wrap;
+}
+
+function setShopFilter(f) { S.shopFilter = f; render(); }
+
+// ── Cart ──────────────────────────────────────────────────────
+function renderCart() {
+  const wrap = el('div', 'container section');
+  const items = Cart.get();
+  if (!items.length) {
+    wrap.innerHTML = `<div style="text-align:center;padding:80px 20px">
+      <div style="font-size:72px;margin-bottom:16px">🎱</div>
+      <h2 style="margin:0 0 8px">Your cart is empty</h2>
+      <p style="color:var(--muted);margin-bottom:24px">Add some equipment to get started</p>
+      <button class="btn btn-primary" onclick="navigate('shop')">Browse Shop</button>
+    </div>`;
+    return wrap;
+  }
+  const sub = Cart.total(), ship = sub > 75 ? 0 : 6.99, total = sub + ship;
+  wrap.innerHTML = `
+    <h2 class="title" style="margin-bottom:24px">Shopping Cart <span style="color:var(--muted);font-size:18px">(${Cart.count()} items)</span></h2>
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start">
+      <div class="card" style="overflow:hidden">
+        ${items.map(item => `
+          <div style="display:flex;gap:16px;padding:20px;border-bottom:1px solid var(--line);align-items:center">
+            <img src="${item.image}" style="width:80px;height:80px;border-radius:12px;object-fit:cover" />
+            <div style="flex:1">
+              <div style="font-weight:700;margin-bottom:2px">${item.name}</div>
+              <div style="color:var(--muted);font-size:13px">${item.category}</div>
+              <div style="color:var(--emerald);font-weight:800;font-size:18px">£${item.price.toFixed(2)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-outline" style="padding:6px 10px;border-radius:8px" onclick="cartUpdate('${item.id}',${item.qty - 1})">−</button>
+              <span style="font-weight:700;min-width:24px;text-align:center">${item.qty}</span>
+              <button class="btn btn-outline" style="padding:6px 10px;border-radius:8px" onclick="cartUpdate('${item.id}',${item.qty + 1})">+</button>
+              <button class="btn" style="padding:6px 10px;background:#fee2e2;color:#b91c1c;border-radius:8px;margin-left:6px" onclick="cartRemove('${item.id}')">
+                <i data-lucide="trash-2" style="width:14px;height:14px"></i>
+              </button>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="card" style="padding:24px">
+        <h3 style="margin:0 0 20px;font-size:18px">Order Summary</h3>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px">
+          <div style="display:flex;justify-content:space-between"><span>Subtotal</span><strong>£${sub.toFixed(2)}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span>Shipping</span><strong style="color:${ship === 0 ? 'var(--emerald)' : 'inherit'}">${ship === 0 ? 'FREE' : '£' + ship.toFixed(2)}</strong></div>
+          ${ship > 0 ? `<div style="font-size:11px;color:var(--muted)">Add £${(75 - sub).toFixed(2)} more for free shipping</div>` : ''}
+          <hr style="border:none;border-top:1px solid var(--line)">
+          <div style="display:flex;justify-content:space-between;font-size:18px"><strong>Total</strong><strong style="color:var(--emerald)">£${total.toFixed(2)}</strong></div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:20px;padding:14px" onclick="doCheckout()">
+          <i data-lucide="credit-card"></i> Checkout Now
+        </button>
+        <button class="btn btn-outline" style="width:100%;margin-top:8px" onclick="navigate('shop')">Continue Shopping</button>
+      </div>
+    </div>`;
+  return wrap;
+}
+
+function cartUpdate(id, qty) { Cart.update(id, qty); render(); }
+function cartRemove(id) { Cart.remove(id); render(); }
+
+function doCheckout() {
+  if (!S.user) { setState({ modal: 'login' }); return; }
+  setState({ modal: 'checkout' });
+}
+
+// ── Orders ────────────────────────────────────────────────────
+function renderOrders() {
+  const wrap = el('div', 'container section');
+  const orders = S.userOrders || [];
+  wrap.innerHTML = `
+    <h2 class="title" style="margin-bottom:24px">My Orders</h2>
+    ${!orders.length
+      ? `<div class="card" style="padding:60px;text-align:center">
+          <div style="font-size:48px;margin-bottom:12px">📦</div>
+          <h3 style="margin:0 0 8px">No orders yet</h3>
+          <p style="color:var(--muted)">Your orders will appear here after checkout</p>
+          <button class="btn btn-primary" onclick="navigate('shop')" style="margin-top:16px">Start Shopping</button>
+         </div>`
+      : `<div style="display:flex;flex-direction:column;gap:16px">
+          ${orders.slice().reverse().map(o => `
+            <div class="card" style="padding:24px">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+                <div>
+                  <div style="font-weight:700;font-size:16px">Order #${String(o.id).padStart(4, '0')}</div>
+                  <div style="font-size:13px;color:var(--muted)">${new Date(o.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                </div>
+                <span class="badge-status ${o.status === 'delivered' ? 'badge-emerald' : o.status === 'processing' ? 'badge-amber' : 'badge-blue'}">${o.status}</span>
+                <div style="text-align:right">
+                  <div style="font-size:18px;font-weight:800;color:var(--emerald)">£${o.total.toFixed(2)}</div>
+                  <div style="font-size:12px;color:var(--muted)">${o.items.length} item(s)</div>
+                </div>
+              </div>
+              <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line);display:flex;gap:12px;flex-wrap:wrap">
+                ${o.items.map(i => `<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;padding:8px 12px;border-radius:10px">
+                  <img src="${i.image}" style="width:36px;height:36px;border-radius:8px;object-fit:cover">
+                  <span style="font-size:13px;font-weight:600">${i.name} ×${i.qty}</span>
+                </div>`).join('')}
+              </div>
+              <div style="margin-top:12px;font-size:12px;color:var(--muted)">📍 ${o.address}</div>
+            </div>`).join('')}
+         </div>`}`;
+  return wrap;
+}
+
+// ── Admin ─────────────────────────────────────────────────────
+function renderAdmin() {
+  const wrap = el('div', 'layout-admin');
+  const sidebar = el('div', 'sidebar');
+  const logo = el('div', 'nav-logo');
+  logo.style.marginBottom = '32px';
+  logo.innerHTML = 'SNOOKER<span>ALLEY</span>';
+  sidebar.appendChild(logo);
+
+  [['dashboard', 'layout-dashboard', 'Dashboard'],
+  ['orders', 'package', 'Orders'],
+  ['products', 'shopping-bag', 'Products'],
+  ['users', 'users', 'Members']].forEach(([tab, icon, label]) => {
+    const a = mkel('a', { href: '#', class: tab === S.adminTab ? 'active' : '' },
+      `<i data-lucide="${icon}" style="width:18px;height:18px"></i> ${label}`,
+      () => { S.adminTab = tab; render(); });
+    a.innerHTML = `<i data-lucide="${icon}" style="width:18px;height:18px"></i> ${label}`;
+    sidebar.appendChild(a);
+  });
+
+  const backLink = mkel('a', { href: '#', style: 'margin-top:24px' },
+    '<i data-lucide="arrow-left" style="width:18px;height:18px"></i> Back to Site',
+    () => navigate('home'));
+  backLink.innerHTML = '<i data-lucide="arrow-left" style="width:18px;height:18px"></i> Back to Site';
+  sidebar.appendChild(backLink);
+  wrap.appendChild(sidebar);
+
+  const content = el('div', 'admin-content');
+  if (S.adminTab === 'dashboard') content.appendChild(renderAdminDashboard());
+  else if (S.adminTab === 'orders') content.appendChild(renderAdminOrders());
+  else if (S.adminTab === 'products') content.appendChild(renderAdminProducts());
+  else if (S.adminTab === 'users') content.appendChild(renderAdminUsers());
+  wrap.appendChild(content);
+  return wrap;
+}
+
+function renderAdminDashboard() {
+  const orders = S.orders || [];
+  const users = S.users || [];
+  const revenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+  const pending = orders.filter(o => o.status === 'processing').length;
+
+  const dailyRev = orders.filter(o => {
+    const d = new Date(o.createdAt);
+    const today = new Date();
+    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  }).reduce((s, o) => s + (o.total || 0), 0);
+
+  const monthRev = orders.filter(o => {
+    const d = new Date(o.createdAt);
+    const today = new Date();
+    return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  }).reduce((s, o) => s + (o.total || 0), 0);
+
+  const frag = document.createDocumentFragment();
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '28px';
+  hdr.style.display = 'flex';
+  hdr.style.justifyContent = 'space-between';
+  hdr.style.alignItems = 'center';
+  hdr.innerHTML = `
+    <div><h2 class="title">Dashboard</h2><p class="subtitle">Welcome back, ${S.user?.name}</p></div>
+    <button class="btn btn-outline" onclick="adminExportData()"><i data-lucide="download"></i> Export Orders (CSV)</button>`;
+  frag.appendChild(hdr);
+
+  const statsGrid = document.createElement('div');
+  statsGrid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px';
+  [
+    ['Daily Revenue', `£${dailyRev.toFixed(2)}`, 'calendar', '#ecfdf5', '#059669'],
+    ['Monthly Revenue', `£${monthRev.toFixed(2)}`, 'pie-chart', '#fefce8', '#ca8a04'],
+    ['Total Revenue', `£${revenue.toFixed(2)}`, 'trending-up', '#d1fae5', '#065f46'],
+    ['Total Orders', orders.length, 'package', '#dbeafe', '#1e40af'],
+  ].forEach(([label, val, icon, bg, color]) => {
+    const c = document.createElement('div');
+    c.className = 'card'; c.style.padding = '20px';
+    c.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:0.08em;margin-bottom:8px">${label}</div>
+        <div style="font-size:24px;font-weight:800">${val}</div>
+      </div>
+      <div style="width:40px;height:40px;background:${bg};border-radius:12px;display:grid;place-items:center;color:${color}">
+        <i data-lucide="${icon}" style="width:18px;height:18px"></i>
+      </div>
+    </div>`;
+    statsGrid.appendChild(c);
+  });
+  frag.appendChild(statsGrid);
+
+  const card = document.createElement('div');
+  card.className = 'card'; card.style.padding = '24px';
+  card.innerHTML = `<h3 style="margin:0 0 16px">Recent Orders</h3>
+    <table class="table">
+      <thead><tr><th>Order ID</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>${orders.slice().reverse().slice(0, 10).map(o => `
+        <tr>
+          <td><strong>#${String(o.id).padStart(4, '0')}</strong></td>
+          <td>${o.customerName}</td>
+          <td>${o.items?.length} items</td>
+          <td style="color:var(--emerald);font-weight:700">£${o.total?.toFixed(2)}</td>
+          <td><span class="badge-status ${o.status === 'delivered' ? 'badge-emerald' : o.status === 'processing' ? 'badge-amber' : 'badge-blue'}">${o.status}</span></td>
+          <td style="color:var(--muted);font-size:12px">${new Date(o.createdAt).toLocaleDateString()}</td>
+        </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">No orders yet</td></tr>'}</tbody>
+    </table>`;
+  frag.appendChild(card);
+  return frag;
+}
+
+function renderAdminOrders() {
+  const orders = S.orders || [];
+  const frag = document.createDocumentFragment();
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '24px';
+  hdr.innerHTML = `<h2 class="title">Orders</h2><p class="subtitle">${orders.length} total orders</p>`;
+  frag.appendChild(hdr);
+
+  const card = document.createElement('div');
+  card.className = 'card'; card.style.overflow = 'hidden';
+  card.innerHTML = `<table class="table">
+    <thead><tr><th>Order ID</th><th>Customer</th><th>Email</th><th>Total</th><th>Status</th><th>Date</th></tr></thead>
+    <tbody>${orders.slice().reverse().map(o => `
+      <tr>
+        <td><strong>#${String(o.id).padStart(4, '0')}</strong></td>
+        <td>${o.customerName}</td>
+        <td style="color:var(--muted);font-size:12px">${o.customerEmail}</td>
+        <td style="color:var(--emerald);font-weight:700">£${o.total.toFixed(2)}</td>
+        <td>
+          <select class="input" style="padding:6px 10px;border-radius:8px;width:130px;font-size:12px;border:1px solid var(--line)" onchange="adminUpdateOrder(${o.id},this.value)">
+            ${['processing', 'shipped', 'delivered', 'cancelled'].map(s => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </td>
+        <td style="color:var(--muted);font-size:12px">${new Date(o.createdAt).toLocaleDateString()}</td>
+      </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">No orders</td></tr>'}</tbody>
+  </table>`;
+  frag.appendChild(card);
+  return frag;
+}
+
+function renderAdminProducts() {
+  const prods = S.products || [];
+  const frag = document.createDocumentFragment();
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '24px';
+  hdr.style.display = 'flex';
+  hdr.style.justifyContent = 'space-between';
+  hdr.style.alignItems = 'flex-end';
+  hdr.innerHTML = `
+    <div><h2 class="title">Products</h2><p class="subtitle">${prods.length} products in catalogue</p></div>
+    <button class="btn btn-primary" onclick="setState({modal:'product'})"><i data-lucide="plus"></i> Add Product</button>`;
+  frag.appendChild(hdr);
+
+  const card = document.createElement('div');
+  card.className = 'card'; card.style.overflow = 'hidden';
+  card.innerHTML = `<table class="table">
+    <thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead>
+    <tbody>${prods.map(p => `
+      <tr>
+        <td><div style="display:flex;align-items:center;gap:12px">
+          <img src="${p.image}" style="width:44px;height:44px;border-radius:10px;object-fit:cover">
+          <div><div style="font-weight:700">${p.name}</div><div style="font-size:12px;color:var(--muted)">#${p.id}</div></div>
+        </div></td>
+        <td><span class="badge badge-blue">${p.category}</span></td>
+        <td style="font-weight:700;color:var(--emerald)">£${p.price.toFixed(2)}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="adminUpdateStock('${p.id}',-1)">−</button>
+            <span style="color:${p.stock < 1 ? 'var(--red)' : 'var(--emerald)'};font-weight:700;min-width:24px;text-align:center">${p.stock}</span>
+            <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="adminUpdateStock('${p.id}',1)">+</button>
+          </div>
+        </td>
+        <td>
+          <button class="btn" style="padding:6px;background:#fee2e2;color:#b91c1c;border-radius:8px" onclick="adminDeleteProduct('${p.id}')">
+            <i data-lucide="trash-2" style="width:14px;height:14px"></i>
+          </button>
+        </td>
+      </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)">No products found</td></tr>'}</tbody>
+  </table>`;
+  frag.appendChild(card);
+  return frag;
+}
+
+async function adminUpdateStock(id, delta) {
+  const p = S.products.find(x => x.id === id);
+  if (!p) return;
+  p.stock = Math.max(0, p.stock + delta);
+  await DB.put('products', p);
+  S.products = await DB.getAll('products');
+  render();
+}
+
+async function adminDeleteProduct(id) {
+  if (!confirm('Are you sure you want to delete this product?')) return;
+  await DB.del('products', id);
+  S.products = await DB.getAll('products');
+  showToast('Product deleted successfully');
+  render();
+}
+
+function adminExportData() {
+  const orders = S.orders || [];
+  if (!orders.length) return showToast('No orders to export', 'error');
+  let csv = 'OrderID,Customer,Email,Total,Status,Date,Items\n';
+  orders.forEach(o => {
+    const itemsStr = o.items.map(i => `${i.name} (x${i.qty})`).join('; ');
+    csv += `${o.id},"${o.customerName}","${o.customerEmail}",${o.total.toFixed(2)},${o.status},${o.createdAt},"${itemsStr}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('hidden', '');
+  a.setAttribute('href', url);
+  a.setAttribute('download', `SnookerAlley_Orders_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function renderAdminUsers() {
+  const admins = (S.users || []).filter(u => u.role === 'admin');
+  const customers = (S.users || []).filter(u => u.role !== 'admin');
+  const frag = document.createDocumentFragment();
+
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '24px';
+  hdr.innerHTML = `<h2 class="title">Members</h2><p class="subtitle">${admins.length + customers.length} total members</p>`;
+  frag.appendChild(hdr);
+
+  // Admin Table
+  const adminCard = document.createElement('div');
+  adminCard.className = 'card';
+  adminCard.style.marginBottom = '24px';
+  adminCard.innerHTML = `<h3 style="padding:20px;margin:0">Admins</h3>
+    <table class="table" style="margin:0">
+      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th></tr></thead>
+      <tbody>${admins.map(u => `
+        <tr oncontextmenu="openUserMenu(event,'${u.email}','customer')">
+          <td><div style="display:flex;align-items:center;gap:10px">
+            <img src="${u.avatar}" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+            <strong>${u.name}</strong>
+          </div></td>
+          <td style="color:var(--muted);font-size:13px">${u.email}</td>
+          <td style="color:var(--muted);font-size:13px">${u.phone || '—'}</td>
+          <td style="color:var(--muted);font-size:12px">${new Date(u.createdAt).toLocaleDateString()}</td>
+        </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--muted)">No admins</td></tr>'}
+      </tbody>
+    </table>`;
+  frag.appendChild(adminCard);
+
+  // Customer Table
+  const customerCard = document.createElement('div');
+  customerCard.className = 'card';
+  customerCard.innerHTML = `<h3 style="padding:20px;margin:0">Customers</h3>
+    <table class="table" style="margin:0">
+      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th></tr></thead>
+      <tbody>${customers.map(u => `
+        <tr oncontextmenu="openUserMenu(event,'${u.email}','admin')">
+          <td><div style="display:flex;align-items:center;gap:10px">
+            <img src="${u.avatar}" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+            <strong>${u.name}</strong>
+          </div></td>
+          <td style="color:var(--muted);font-size:13px">${u.email}</td>
+          <td style="color:var(--muted);font-size:13px">${u.phone || '—'}</td>
+          <td style="color:var(--muted);font-size:12px">${new Date(u.createdAt).toLocaleDateString()}</td>
+        </tr>`).join('') || '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--muted)">No customers</td></tr>'}
+      </tbody>
+    </table>`;
+  frag.appendChild(customerCard);
+
+  return frag;
+}
+
+function openUserMenu(e, email, newRole) {
+  e.preventDefault();
+
+  const menu = document.createElement('div');
+  menu.style.position = 'fixed';
+  menu.style.top = e.clientY + 'px';
+  menu.style.left = e.clientX + 'px';
+  menu.style.background = 'white';
+  menu.style.border = '1px solid #e2e8f0';
+  menu.style.borderRadius = '10px';
+  menu.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
+  menu.style.padding = '6px';
+  menu.style.zIndex = '9999';
+
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-outline';
+  btn.style.fontSize = '12px';
+  btn.style.padding = '6px 12px';
+  btn.textContent = newRole === 'admin' ? 'Promote to Admin' : 'Demote to Customer';
+
+  btn.onclick = async () => {
+    const user = await DB.getByIndex('users', 'email', email);
+    if (!user) return;
+
+    user.role = newRole;
+    await DB.put('users', user);
+    S.users = await DB.getAll('users');
+
+    showToast('Role updated');
+    document.body.removeChild(menu);
+    render();
+  };
+
+  menu.appendChild(btn);
+  document.body.appendChild(menu);
+
+  document.addEventListener('click', () => {
+    if (menu.parentNode) {
+      document.body.removeChild(menu);
+    }
+  }, { once: true });
+}
+
+async function adminUpdateOrder(id, status) {
+  const order = await DB.get('orders', id);
+  if (!order) return;
+  order.status = status;
+  await DB.put('orders', order);
+  S.orders = await DB.getAll('orders');
+  showToast(`Order #${String(id).padStart(4, '0')} updated to "${status}"`);
+}
+// ── Right Click Role Menu ─────────────────────────────────────
+let activeUserMenu = null;
+
+function openUserMenu(e, email, newRole) {
+
+  e.preventDefault();
+
+  if (activeUserMenu) {
+    activeUserMenu.remove();
+    activeUserMenu = null;
+  }
+
+  const menu = document.createElement("div");
+
+  menu.style.position = "fixed";
+  menu.style.top = e.clientY + "px";
+  menu.style.left = e.clientX + "px";
+  menu.style.background = "white";
+  menu.style.border = "1px solid #e2e8f0";
+  menu.style.borderRadius = "10px";
+  menu.style.boxShadow = "0 10px 20px rgba(0,0,0,0.15)";
+  menu.style.padding = "6px";
+  menu.style.zIndex = "9999";
+
+  const btn = document.createElement("button");
+
+  btn.className = "btn btn-outline";
+  btn.style.fontSize = "12px";
+  btn.style.padding = "6px 12px";
+
+  btn.textContent =
+    newRole === "admin"
+      ? "Promote to Admin"
+      : "Demote to Customer";
+
+  btn.onclick = async () => {
+
+    const user = await DB.getByIndex("users", "email", email);
+
+    if (!user) return;
+
+    user.role = newRole;
+
+    await DB.put("users", user);
+
+    S.users = await DB.getAll("users");
+
+    showToast("Role updated");
+
+    menu.remove();
+    activeUserMenu = null;
+
+    render();
+  };
+
+  menu.appendChild(btn);
+
+  document.body.appendChild(menu);
+
+  activeUserMenu = menu;
+
+  document.addEventListener("click", () => {
+
+    if (activeUserMenu) {
+      activeUserMenu.remove();
+      activeUserMenu = null;
+    }
+
+  }, { once: true });
+}
+// ── Modals ────────────────────────────────────────────────────
+function renderModal(type) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal';
+  overlay.addEventListener('click', e => { if (e.target === overlay) setState({ modal: null }); });
+  let card;
+  if (type === 'login') card = buildLoginModal();
+  else if (type === 'register') card = buildRegisterModal();
+  else if (type === 'verify') card = buildVerifyModal();
+  else if (type === 'checkout') card = buildCheckoutModal();
+  else if (type === 'profile') card = buildProfileModal();
+  else if (type === 'product') card = buildProductModal();
+  if (card) overlay.appendChild(card);
+  return overlay;
+}
+
+function closeBtn() {
+  const b = document.createElement('button');
+  b.className = 'btn';
+  b.style.cssText = 'background:#f1f5f9;padding:8px;border-radius:12px';
+  b.innerHTML = '<i data-lucide="x" style="width:18px;height:18px"></i>';
+  b.addEventListener('click', () => setState({ modal: null }));
+  return b;
+}
+
+function buildLoginModal() {
+
+  const card = document.createElement('div');
+  card.className = 'modal-card';
+
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h2 style="margin:0;font-size:24px">Sign In</h2>
+      <button class="btn" style="background:#f1f5f9;padding:8px;border-radius:12px"
+        onclick="setState({modal:null})">
+        ✕
+      </button>
+    </div>
+
+    <div id="login-err" style="display:none;background:#fee2e2;color:#b91c1c;padding:12px;border-radius:10px;margin-bottom:14px;font-size:13px"></div>
+
+    <input id="login-email" class="input" placeholder="Email address" style="margin-bottom:10px">
+
+    <input id="login-password" class="input" type="password" placeholder="Password" style="margin-bottom:14px">
+
+    <button class="btn btn-primary" style="width:100%;padding:14px" onclick="doLogin()">
+      Sign In
+    </button>
+
+    <hr style="margin:20px 0">
+
+    <div style="text-align:center;font-size:13px;color:#64748b;margin-bottom:10px">
+      Or continue with
+    </div>
+
+    <div id="google-signin" style="display:flex;justify-content:center;margin-bottom:18px"></div>
+
+    <div style="text-align:center">
+      <button class="btn btn-outline"
+        style="width:100%;padding:12px"
+        onclick="setState({modal:'register'})">
+        Create Account
+      </button>
+    </div>
+  `;
+
+  setTimeout(() => {
+
+    if (!window.google) return;
+
+    google.accounts.id.initialize({
+      client_id: "484090538674-krtmknjabld56t8goceuv7puo4c7ml9q.apps.googleusercontent.com",
+      callback: googleLoginHandler
+    });
+
+    google.accounts.id.renderButton(
+      document.getElementById("google-signin"),
+      {
+        theme: "outline",
+        size: "large",
+        width: 260
+      }
+    );
+
+  }, 200);
+
+  return card;
+}
+function buildRegisterModal() {
+  const card = document.createElement('div');
+  card.className = 'modal-card';
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h2 style="margin:0;font-size:24px">Create Account</h2>
+    </div>
+    <div id="reg-err" style="display:none;background:#fee2e2;color:#b91c1c;padding:12px;border-radius:10px;font-size:13px;margin-bottom:16px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="grid-column:1/-1"><label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Full Name *</label>
+        <input class="input" id="reg-name" placeholder="John Doe" style="border:1px solid var(--line)"></div>
+      <div style="grid-column:1/-1"><label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Email Address *</label>
+        <input class="input" id="reg-email" type="email" placeholder="you@example.com" style="border:1px solid var(--line)"></div>
+      <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Phone Number</label>
+        <input class="input" id="reg-phone" type="tel" placeholder="+44 7000 000000" style="border:1px solid var(--line)"></div>
+      <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Password *</label>
+        <input class="input" id="reg-pass" type="password" placeholder="Min 8 characters" style="border:1px solid var(--line)"></div>
+      <div style="grid-column:1/-1"><label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Confirm Password *</label>
+        <input class="input" id="reg-pass2" type="password" placeholder="Repeat your password" style="border:1px solid var(--line)"></div>
+    </div>
+    <div style="margin-top:16px">
+      <label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="reg-terms" style="margin-top:2px">
+        <span>I agree to the <a href="#" style="color:var(--emerald);font-weight:700">Terms of Service</a> and <a href="#" style="color:var(--emerald);font-weight:700">Privacy Policy</a></span>
+      </label>
+    </div>
+    <button class="btn btn-primary" id="reg-submit" style="width:100%;padding:14px;margin-top:20px">
+      <i data-lucide="user-plus"></i> Create Account
+    </button>
+    <div style="text-align:center;font-size:13px;color:var(--muted);margin-top:12px">
+      Already have an account? <a href="#" style="color:var(--emerald);font-weight:700" onclick="setState({modal:'login'})">Sign In</a>
+    </div>`;
+  const hdr = card.querySelector('div');
+  hdr.appendChild(closeBtn());
+  card.querySelector('#reg-submit').addEventListener('click', doRegister);
+  return card;
+}
+
+function buildVerifyModal() {
+  const { email, code } = S.pendingVerify || {};
+  const card = document.createElement('div');
+  card.className = 'modal-card';
+  card.innerHTML = `
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="width:64px;height:64px;background:#d1fae5;border-radius:50%;display:grid;place-items:center;margin:0 auto 16px;font-size:28px">✉️</div>
+      <h2 style="margin:0 0 8px">Verify Your Email</h2>
+      <p style="color:var(--muted);font-size:14px;margin:0">A 6-digit code was sent to<br><strong>${email}</strong></p>
+    </div>
+    <div id="verify-err" style="display:none;background:#fee2e2;color:#b91c1c;padding:12px;border-radius:10px;font-size:13px;margin-bottom:16px"></div>
+ 
+    <div style="margin-bottom:20px;background:#f8fafc;border-radius:14px;padding:16px;text-align:center">
+      <div style="font-size:14px;color:var(--emerald);font-weight:700">✓ Code sent successfully!</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Please check your inbox and spam folder.</div>
+    </div>
+    <label style="font-size:13px;font-weight:700;display:block;margin-bottom:8px">Enter Verification Code</label>
+    <input class="input" id="verify-code" type="text" placeholder="000000" maxlength="6"
+      style="border:1px solid var(--line);font-size:28px;letter-spacing:0.25em;text-align:center;font-family:monospace">
+    <button class="btn btn-primary" id="verify-submit" style="width:100%;padding:14px;margin-top:16px">
+      <i data-lucide="check-circle"></i> Verify & Activate Account
+    </button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px" onclick="setState({modal:'register'})">← Back to Register</button>`;
+  card.querySelector('#verify-submit').addEventListener('click', doVerify);
+  card.querySelector('#verify-code').addEventListener('keydown', e => { if (e.key === 'Enter') doVerify(); });
+  return card;
+}
+
+function buildCheckoutModal() {
+  const sub = Cart.total(), ship = sub > 75 ? 0 : 6.99;
+  const card = document.createElement('div');
+  card.className = 'modal-card';
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h2 style="margin:0;font-size:24px">Checkout</h2>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Delivery Address *</label>
+        <input class="input" id="co-addr" placeholder="123 Main Street, City, Postcode" style="border:1px solid var(--line)"></div>
+      <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Card Number</label>
+        <input class="input" id="co-card" placeholder="4242 4242 4242 4242" maxlength="19" style="border:1px solid var(--line)" oninput="this.value=this.value.replace(/\\D/g,'').slice(0,16).replace(/(.{4})/g,'$1 ').trim()"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Expiry</label>
+          <input class="input" id="co-exp" placeholder="MM/YY" maxlength="5" style="border:1px solid var(--line)"></div>
+        <div><label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">CVV</label>
+          <input class="input" id="co-cvv" placeholder="123" maxlength="3" style="border:1px solid var(--line)"></div>
+      </div>
+    </div>
+    <div style="margin-top:20px;background:#f8fafc;border-radius:14px;padding:18px">
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px"><span>Subtotal</span><strong>£${sub.toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px"><span>Shipping</span><strong style="color:${ship === 0 ? 'var(--emerald)' : 'inherit'}">${ship === 0 ? 'FREE' : '£' + ship.toFixed(2)}</strong></div>
+      <hr style="border:none;border-top:1px solid var(--line)">
+      <div style="display:flex;justify-content:space-between;font-size:18px"><strong>Total</strong><strong style="color:var(--emerald)">£${(sub + ship).toFixed(2)}</strong></div>
+    </div>
+    <button class="btn btn-primary" id="co-submit" style="width:100%;padding:14px;margin-top:16px">
+      <i data-lucide="lock"></i> Place Order — £${(sub + ship).toFixed(2)}
+    </button>`;
+  const hdr = card.querySelector('div');
+  hdr.appendChild(closeBtn());
+  card.querySelector('#co-submit').addEventListener('click', doPlaceOrder);
+  return card;
+}
+
+function buildProductModal() {
+  const card = el('div', 'modal-card');
+  const cats = ['Cues', 'Balls', 'Tables', 'Accessories', 'Cases'];
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h2 style="margin:0;font-size:24px">Add New Product</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="grid-column:1/-1">
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Product Name *</label>
+        <input class="input" id="p-name" placeholder="Pro Series Cue" style="border:1px solid var(--line)">
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Category *</label>
+        <select class="input" id="p-cat" style="border:1px solid var(--line)">
+          ${cats.map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Price (£) *</label>
+        <input class="input" id="p-price" type="number" step="0.01" placeholder="49.99" style="border:1px solid var(--line)">
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Initial Stock *</label>
+        <input class="input" id="p-stock" type="number" placeholder="20" style="border:1px solid var(--line)">
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Badge</label>
+        <select class="input" id="p-badge" style="border:1px solid var(--line)">
+          <option value="">None</option>
+          <option value="new">New</option>
+          <option value="bestseller">Bestseller</option>
+          <option value="sale">Sale</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Product Image *</label>
+        <div id="p-dropzone" style="border:2px dashed var(--line);border-radius:12px;padding:30px;text-align:center;cursor:pointer;background:#f8fafc;transition:0.2s">
+          <div id="p-preview" style="display:none;margin-bottom:12px">
+            <img id="p-img-tag" style="width:80px;height:80px;border-radius:10px;object-fit:cover;margin:0 auto">
+          </div>
+          <div id="p-prompt">
+            <i data-lucide="upload-cloud" style="width:32px;height:32px;color:var(--muted);margin-bottom:8px"></i>
+            <div style="font-size:14px;font-weight:600">Drag & Drop or Click to Upload</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">PNG, JPG or WebP (Max 2MB)</div>
+          </div>
+          <input type="file" id="p-file" accept="image/*" style="display:none">
+          <input type="hidden" id="p-image-data">
+        </div>
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Description</label>
+        <textarea class="input" id="p-desc" style="border:1px solid var(--line);min-height:80px;resize:vertical"></textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="p-submit" style="width:100%;padding:14px;margin-top:24px">
+      <i data-lucide="plus"></i> Save Product
+    </button>`;
+
+  const hdr = card.querySelector('div');
+  hdr.appendChild(closeBtn());
+
+  const dz = card.querySelector('#p-dropzone');
+  const fi = card.querySelector('#p-file');
+  const id = card.querySelector('#p-image-data');
+  const pr = card.querySelector('#p-preview');
+  const pt = card.querySelector('#p-prompt');
+  const it = card.querySelector('#p-img-tag');
+
+  const handleFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      id.value = e.target.result;
+      it.src = e.target.result;
+      pr.style.display = 'block';
+      pt.style.display = 'none';
+      dz.style.borderColor = 'var(--emerald)';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  dz.onclick = () => fi.click();
+  fi.onchange = (e) => handleFile(e.target.files[0]);
+  dz.ondragover = (e) => { e.preventDefault(); dz.style.background = '#f1f5f9'; };
+  dz.ondragleave = () => { dz.style.background = '#f8fafc'; };
+  dz.ondrop = (e) => { e.preventDefault(); dz.style.background = '#f8fafc'; handleFile(e.dataTransfer.files[0]); };
+
+  card.querySelector('#p-submit').addEventListener('click', doSaveProduct);
+  return card;
+}
+
+async function doSaveProduct() {
+  const name = document.getElementById('p-name')?.value.trim();
+  const cat = document.getElementById('p-cat')?.value;
+  const price = parseFloat(document.getElementById('p-price')?.value);
+  const stock = parseInt(document.getElementById('p-stock')?.value);
+  const badge = document.getElementById('p-badge')?.value;
+  const image = document.getElementById('p-image-data')?.value; // Now uses Base64 data
+  const desc = document.getElementById('p-desc')?.value.trim();
+
+  if (!name || isNaN(price) || isNaN(stock) || !image) {
+    showToast('Please fill all required fields and upload an image', 'error');
+    return;
+  }
+
+  const newProd = {
+    id: 'p' + Date.now(),
+    name, category: cat, price, stock, badge, image, desc,
+    rating: 5, reviews: 0
+  };
+
+  await DB.put('products', newProd);
+  S.products = await DB.getAll('products');
+  setState({ modal: null });
+  showToast(`Product "${name}" added!`);
+}
+
+function buildProfileModal() {
+  const u = S.user;
+  const card = document.createElement('div');
+  card.className = 'modal-card';
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h2 style="margin:0;font-size:24px">My Profile</h2>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:20px;background:#f8fafc;border-radius:16px">
+      <img src="${u.avatar}" style="width:64px;height:64px;border-radius:50%;object-fit:cover">
+      <div>
+        <div style="font-size:20px;font-weight:700">${u.name}</div>
+        <div style="color:var(--muted);font-size:14px">${u.email}</div>
+        <span class="badge badge-emerald" style="margin-top:6px">${u.role === 'admin' ? '⚙ Admin' : '✓ Verified Customer'}</span>
+      </div>
+    </div>
+    <div style="display:grid;gap:10px;font-size:14px">
+      <div style="display:flex;justify-content:space-between;padding:12px;background:#f8fafc;border-radius:10px">
+        <span style="color:var(--muted)">Phone</span><strong>${u.phone || '—'}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:12px;background:#f8fafc;border-radius:10px">
+        <span style="color:var(--muted)">Member since</span><strong>${new Date(u.createdAt).toLocaleDateString()}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:12px;background:#f8fafc;border-radius:10px">
+        <span style="color:var(--muted)">Orders placed</span><strong>${S.userOrders?.length || 0}</strong></div>
+    </div>
+    <button class="btn btn-outline" id="prof-orders" style="width:100%;margin-top:20px">View My Orders</button>
+    <button class="btn" id="prof-logout" style="width:100%;margin-top:8px;background:#fee2e2;color:#b91c1c">Sign Out</button>`;
+  const hdr = card.querySelector('div');
+  hdr.appendChild(closeBtn());
+  card.querySelector('#prof-orders').addEventListener('click', () => { navigate('orders'); setState({ modal: null }); });
+  card.querySelector('#prof-logout').addEventListener('click', doLogout);
+  return card;
+}
+
+function renderToast() {
+  const { msg, type } = S.toast;
+  const t = document.createElement('div');
+  t.style.cssText = `
+    position:fixed;bottom:24px;right:24px;z-index:9999;
+    background:${type === 'error' ? '#b91c1c' : '#0f766e'};
+    color:white;padding:14px 20px;border-radius:16px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.2);
+    font-weight:700;font-size:14px;
+    animation:slideUp 0.3s ease;
+    max-width:320px;line-height:1.4;`;
+  t.textContent = msg;
+  return t;
+}
+
+// ── Action Handlers ───────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-email')?.value.trim();
+  const pass = document.getElementById('login-password')?.value;
+  const err = document.getElementById('login-err');
+  try {
+    const user = await Auth.login(email, pass);
+    S.user = user;
+    S.modal = null;
+    S.userOrders = await DB.getAll('orders', 'userId', user.id);
+    showToast(`Welcome back, ${user.name}! 🎱`);
+    render();
+  } catch (e) {
+    if (err) { err.textContent = e.message; err.style.display = 'block'; }
+  }
+}
+
+async function handleGoogleLogin(response) {
+  await googleLoginHandler(response);
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name')?.value.trim();
+  const email = document.getElementById('reg-email')?.value.trim();
+  const phone = document.getElementById('reg-phone')?.value.trim();
+  const pass = document.getElementById('reg-pass')?.value;
+  const pass2 = document.getElementById('reg-pass2')?.value;
+  const terms = document.getElementById('reg-terms')?.checked;
+  const err = document.getElementById('reg-err');
+  const showErr = m => { if (err) { err.textContent = m; err.style.display = 'block'; } };
+
+  if (!name || name.length < 2) return showErr('Please enter your full name');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr('Please enter a valid email address');
+  if (!pass || pass.length < 8) return showErr('Password must be at least 8 characters');
+  if (pass !== pass2) return showErr('Passwords do not match');
+  if (!terms) return showErr('Please agree to the Terms of Service to continue');
+
+  try {
+    const code = await Auth.register({ name, email, password: pass, phone });
+    S.pendingVerify = { email, code };
+
+    // Disable the button and show loading state
+    const btn = document.getElementById('reg-submit');
+    if (btn) {
+      btn.innerHTML = '<i data-lucide="loader"></i> Sending code...';
+      btn.disabled = true;
+    }
+
+    // Send the email using EmailJS
+    await emailjs.send("service_28ikxwu", "template_nekhgre", {
+      to_name: name,
+      to_email: email,
+      verification_code: code
+    });
+
+    // Open the verification modal
+    setState({ modal: 'verify' });
+
+  } catch (e) {
+    console.error("EmailJS Error:", e);
+
+    // Reset the button so the user can try again
+    const btn = document.getElementById('reg-submit');
+    if (btn) {
+      btn.innerHTML = '<i data-lucide="user-plus"></i> Create Account';
+      btn.disabled = false;
+    }
+    showErr(e.text || e.message || 'Failed to send verification email. Please try again.');
+  }
+} // <--- THIS BRACE CLOSES doRegister() CORRECTLY
+
+async function doVerify() {
+  const code = document.getElementById('verify-code')?.value.trim();
+  const { email } = S.pendingVerify || {};
+  const err = document.getElementById('verify-err');
+
+  if (!code || code.length !== 6) {
+    if (err) { err.textContent = 'Please enter the 6-digit code'; err.style.display = 'block'; }
+    return;
+  }
+
+  try {
+    const user = await Auth.verify(email, code);
+    S.user = user;
+    S.pendingVerify = null;
+    S.modal = null;
+    S.userOrders = [];
+    showToast(`Account verified! Welcome, ${user.name} 🎉`);
+  } catch (e) {
+    if (err) { err.textContent = e.message; err.style.display = 'block'; }
+  }
+}
+async function doPlaceOrder() {
+  const addr = document.getElementById('co-addr')?.value.trim();
+  const card = document.getElementById('co-card')?.value.replace(/\s/g, '');
+  const exp = document.getElementById('co-exp')?.value.trim();
+  const cvv = document.getElementById('co-cvv')?.value.trim();
+  if (!addr) return showToast('Please enter a delivery address', 'error');
+  if (!card || card.length < 16) return showToast('Please enter a valid card number', 'error');
+  if (!exp || !/^\d{2}\/\d{2}$/.test(exp)) return showToast('Please enter a valid expiry date (MM/YY)', 'error');
+  if (!cvv || cvv.length < 3) return showToast('Please enter your CVV', 'error');
+
+  const items = Cart.get();
+  const sub = Cart.total();
+  const ship = sub > 75 ? 0 : 6.99;
+  const order = {
+    userId: S.user.id,
+    customerName: S.user.name,
+    customerEmail: S.user.email,
+    items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, image: i.image })),
+    total: sub + ship, address: addr,
+    status: 'processing',
+    createdAt: new Date().toISOString()
+  };
+
+  // Decrement stock
+  for (const item of items) {
+    const p = S.products.find(x => x.id === item.id);
+    if (p) {
+      p.stock = Math.max(0, p.stock - item.qty);
+      await DB.put('products', p);
+    }
+  }
+  S.products = await DB.getAll('products');
+
+  await DB.put('orders', order);
+  Cart.clear();
+  S.modal = null;
+  S.userOrders = await DB.getAll('orders', 'userId', S.user.id);
+  navigate('orders');
+  showToast('Order placed successfully! 📦');
+}
+
+async function doLogout() {
+  await Auth.logout();
+  S.user = null; S.userOrders = []; S.modal = null;
+  navigate('home');
+  showToast('Signed out. See you soon!');
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function el(tag, cls, styles) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (styles) Object.assign(e.style, styles);
+  return e;
+}
+
+function mkel(tag, attrs, html, onclick) {
+  const e = document.createElement(tag);
+  Object.entries(attrs || {}).forEach(([k, v]) => {
+    if (k === 'class') e.className = v;
+    else e.setAttribute(k, v);
+  });
+  if (html !== null && html !== undefined) e.innerHTML = String(html);
+  if (onclick) e.addEventListener('click', onclick);
+  return e;
+}
+
+// ── Init ──────────────────────────────────────────────────────
+const styleTag = document.createElement('style');
+styleTag.textContent = `
+  @keyframes slideUp { from { transform:translateY(20px);opacity:0 } to { transform:translateY(0);opacity:1 } }
+  @media(max-width:900px){
+    [style*="grid-template-columns:1fr 340px"]{grid-template-columns:1fr!important}
+    [style*="grid-template-columns:repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr)!important}
+  }
+`;
+document.head.appendChild(styleTag);
+
+(async () => {
+  await seedData();
+  S.user = await Auth.currentUser();
+  if (S.user) S.userOrders = await DB.getAll('orders', 'userId', S.user.id);
+  S.products = await DB.getAll('products');
+  render();
+})();
+// ── Google Sign In Setup ─────────────────────────────
+window.addEventListener("load", () => {
+
+  if (!window.google) return;
+
+  google.accounts.id.initialize({
+    client_id: "484090538674-krtmknjabld56t8goceuv7puo4c7ml9q.apps.googleusercontent.com",
+    callback: googleLoginHandler
+  });
+
+  google.accounts.id.renderButton(
+    document.getElementById("google-signin"),
+    {
+      theme: "outline",
+      size: "large",
+      width: 260
+    }
+  );
+
+});
