@@ -297,7 +297,7 @@ function showToast(msg, type = 'success', image = null) {
 
   const t = document.createElement('div');
   t.style.cssText = `
-    background:${type === 'error' ? '#b91c1c' : '#0f766e'};
+    background:${type === 'error' ? '#b91c1c' : '#D12200'};
     color:white;padding:14px 20px;border-radius:16px;
     box-shadow:0 8px 24px rgba(0,0,0,0.2);
     font-weight:700;font-size:14px;
@@ -329,8 +329,10 @@ async function navigate(page) {
     return;
   }
   if (page === 'orders' && !S.user) { setState({ modal: 'login' }); return; }
+  if (page === 'policies') { S.page = 'policies'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
 
   S.page = page; render();
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -350,8 +352,11 @@ function render() {
   else if (S.page === 'shop') main.appendChild(renderShop());
   else if (S.page === 'orders') main.appendChild(renderOrders());
   else if (S.page === 'admin') main.appendChild(renderAdmin());
+  else if (S.page === 'policies') main.appendChild(renderPolicies());
   app.appendChild(main);
+  if (S.page !== 'admin') app.appendChild(renderFooter());
   if (S.modal) app.appendChild(renderModal(S.modal));
+
   lucide.createIcons();
   updateCartBadge();
 }
@@ -362,7 +367,7 @@ function renderNav() {
   const inner = el('div', 'nav-inner container');
 
   const logo = mkel('a', { class: 'nav-logo', href: '#' }, null, () => navigate('home'));
-  logo.innerHTML = '<img src="mmz%20logo%20fin%201.png" style="height:32px;margin-right:8px;vertical-align:middle;display:inline-block;">MASTERMINDZ <span style="color:var(--text);font-weight:400;">SPORTZ</span>';
+  logo.innerHTML = '<img src=\"mmz%20logo%20fin%201.png\" style=\"width:5cm;height:1cm;object-fit:contain;\">';
 
   const links = el('div', 'nav-links');
   [['home', 'Home'], ['shop', 'Shop'], ['orders', 'My Orders']].forEach(([p, l]) => {
@@ -727,9 +732,9 @@ function renderAdminDashboard() {
   const statsGrid = document.createElement('div');
   statsGrid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px';
   [
-    ['Daily Revenue', dailyRev, 'calendar', '#ecfdf5', '#059669', true],
+    ['Daily Revenue', dailyRev, 'calendar', 'rgba(209, 34, 0, 0.1)', '#D12200', true],
     ['Monthly Revenue', monthRev, 'pie-chart', '#fefce8', '#ca8a04', true],
-    ['Total Revenue', revenue, 'trending-up', '#d1fae5', '#065f46', true],
+    ['Total Revenue', revenue, 'trending-up', 'rgba(209, 34, 0, 0.15)', '#9e1900', true],
     ['Total Orders', orders.length, 'package', '#dbeafe', '#1e40af', false],
   ].forEach(([label, val, icon, bg, color, isCurrency]) => {
     const c = document.createElement('div');
@@ -1221,7 +1226,7 @@ function buildVerifyModal() {
   card.className = 'modal-card';
   card.innerHTML = `
     <div style="text-align:center;margin-bottom:24px">
-      <div style="width:64px;height:64px;background:#d1fae5;border-radius:50%;display:grid;place-items:center;margin:0 auto 16px;font-size:28px">✉️</div>
+      <div style="width:64px;height:64px;background:rgba(209, 34, 0, 0.15);border-radius:50%;display:grid;place-items:center;margin:0 auto 16px;font-size:28px">✉️</div>
       <h2 style="margin:0 0 8px">Verify Your Email</h2>
       <p style="color:var(--muted);font-size:14px;margin:0">A 6-digit code was sent to<br><strong>${email}</strong></p>
     </div>
@@ -1429,9 +1434,281 @@ function buildProfileModal() {
   return card;
 }
 
+function renderPolicies() {
+  const wrap = el('div', 'container section');
+  wrap.innerHTML = `
+    <div style="max-width:800px;margin:0 auto;color:var(--text)">
+      <h1 class="title" style="font-size:36px;margin-bottom:8px">Privacy Policy</h1>
+      
+      <p style="color:var(--muted);line-height:1.6;margin-bottom:20px">
+        MasterMindz Sportz (referred to as “we”, “us”, “Company”) is authors and publishers of the website www.mastermindzsportz.com and its sub domains, if any, (collectively referred to as “Website”) and other applications, mobile applications (“Services”) has provided this privacy policy (“Policy”) to familiarise You with the manner in which the Company uses and discloses Your information collected for the same through the Website or its Services.
+      </p>
+      
+      <p style="color:var(--muted);line-height:1.6;margin-bottom:20px">
+        Company created this Privacy Policy to demonstrate its commitment to the protection of Users’ privacy and Users’ personal information. Users’ use of and access to the Services is subject to this Privacy Policy and the attached Terms of Use. Any term used but not defined in this Privacy Policy shall have the same meaning as attributed to it in the Terms of Use.
+      </p>
+
+      <p style="color:var(--muted);line-height:1.6;margin-bottom:20px;font-size:12px;text-transform:uppercase">
+        BY CONFIRMING THAT YOU ARE BOUND BY THIS PRIVACY POLICY (BY THE MEANS PROVIDED ON THIS WEBSITE OR APPLICATION), BY USING THE SERVICES OR BY OTHERWISE GIVING US YOUR INFORMATION, YOU AGREE TO THE POLICIES AND PRACTICES OUTLINED IN THIS PRIVACY POLICY AND YOU HEREBY CONSENT TO OUR COLLECTION, USE AND SHARING OF YOUR INFORMATION AS DESCRIBED IN THIS PRIVACY POLICY AND TERMS OF USE. WE RESERVE THE RIGHT TO CHANGE, MODIFY, ADD OR DELETE PORTIONS OF THE TERMS OF THIS PRIVACY POLICY, AT OUR SOLE DISCRETION, AT ANY TIME AND PUBLISH THE SAME. IF YOU DO NOT AGREE WITH THIS PRIVACY POLICY AT ANY TIME, DO NOT USE ANY OF THE SERVICES OR GIVE US ANY OF YOUR INFORMATION. IF YOU USE THE SERVICES ON BEHALF OF SOMEONE ELSE (SUCH AS YOUR SPOUSE, CHILD OR OTHER CLOSE FAMILY MEMBER) OR AN ENTITY, YOU REPRESENT THAT YOU ARE AUTHORISED BY SUCH INDIVIDUAL OR ENTITY TO ACCEPT THIS PRIVACY POLICY ON SUCH INDIVIDUAL’S OR ENTITY’S BEHALF.<br><br>
+        BY USING THE WEBSITE, YOU AGREE TO THE TERMS AND CONDITIONS OF THIS POLICY.
+      </p>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">1. Scope of Policy</h2>
+        <p style="color:var(--muted);line-height:1.6">1.1: When You use the Website or the Services, the Company may seek and collect certain personal and non-personal information classified as mandatory or voluntary (collectively “Information”). Accordingly, whenever You use the Website or the Services, You consent to the collection, use, and disclosure of the Information in accordance with this Policy.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">2. Collection and Use of Personal Information</h2>
+        <p style="color:var(--muted);line-height:1.6">2.1: Personal information is data that can be used to uniquely identify or contact a single person. “Personal Information” for the purposes of this Policy shall include, but not be limited to, information regarding Your name, address, telephone number, date of birth, gender, e-mail address, image and video captures, biometric information, etc.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">2.2: Some of the Information that Company may ask You to provide may be identified as mandatory and some as voluntary. If You do not provide the mandatory Information, You will not be able to avail the services provided by Company.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">2.3: Company collects Personal Information that Company believes to be relevant and which is required to provide the Services to the User. The Company may share your Personal Information with non-affiliated entities to continuously improve the User experience with regards to the Service, to improve security measures and/or to provide offers and promotional materials.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">2.4: All the information provided to us by a User, including sensitive personal information, is voluntary. You understand that Company, either itself or with its Partners, may use certain information of yours, which has been designated as ‘sensitive personal data or information’:</p>
+        <ul style="color:var(--muted);line-height:1.6;margin-top:12px;padding-left:20px">
+          <li>for the purpose of providing you the Services,</li>
+          <li>for commercial purposes and in an aggregated or non-personally identifiable form for research, statistical analysis and business intelligence purposes,</li>
+          <li>for sale or transfer of such research, statistical or intelligence data in an aggregated or non-personally</li>
+        </ul>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">2.5: You are responsible for maintaining the accuracy of the information you submit to us, such as your contact information provided as part of account registration. If your personal information changes, you may correct, delete inaccuracies, or amend information by making the change on your profile information page on the Websites or Application or by contacting Company authorised person at support@mastermindzsportz.com.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">2.6: Company may require the User to pay with a credit card, debit card, net banking, wallets or other online payment mechanisms for Services for which an amount(s) is/are payable. Company will collect such User’s credit card number and/or other financial institution information such as bank account numbers and will use that information for the billing and payment processes, including but not limited to the use and disclosure of such credit card number and information to third parties as necessary to complete such billing operation. Verification of credit information, however, is accomplished solely by the User through the authentication process offered by a third party payment gateway. User’s credit card/ debit card details are transacted upon secure sites of approved payment gateways which are digitally encrypted, thereby providing the highest possible degree of care as per latest technology currently available. User is cautioned, however, that internet technology is not fool proof or safe and User should exercise discretion on using the same.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">3. Disclosure of Personal Information</h2>
+        <p style="color:var(--muted);line-height:1.6">3.1: Company will keep Your Personal Information confidential to the maximum possible extent. Company limits the disclosure of Personal Information to Company’s employees, independent contractors, affiliates, consultants, business associates, service providers on a need-to-know basis, and only for the purposes stated in Clause 2 above and only for the entities described below.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">3.2: In addition to the above, the Company may share Personal Information which the Company may believe to be necessary or appropriate: (i) under applicable law; (ii) to comply with any legal processes; (iii) to respond to requests from public and government authorities; (iv) to enforce the User Terms; (v) to protect Company’s operations or those of any of Company’s affiliates, consultants, business associates, service providers; (vi) to protect Company’s rights, privacy, safety or property, and/or that of Company’s affiliates, You or others; and (vii) to allow Company to pursue available remedies or limit the damages that Company may sustain.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">4. Collection and Use of Non-Personal Information</h2>
+        <p style="color:var(--muted);line-height:1.6">4.1: Non-personal information is any information that does not reveal Your specific identity, such as, browser information, Internet protocol (IP) address, particulars of the accessing device, and other information collected through cookies (“Non-Personal Information”). The Website gathers some information automatically when You visit the URL of the Website and stores it in log files. Accordingly, when You use the Website, Company may collect certain information about Your computer or device to facilitate, evaluate and verify Your use of the Website. This information is generally collected in aggregate form, without identifying any user individually.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">4.2: As Non-Personal Information does not personally identify You, Company may use and disclose Non-Personal Information for any purpose. In some instances, Company may combine Non-Personal Information with Personal Information (such as combining Your name with Your geographical location). If Company combines any Non-Personal Information with Personal Information, the combined information will be treated by Company as Personal Information as long as it is combined.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">5. Third-Party Links to other Websites</h2>
+        <p style="color:var(--muted);line-height:1.6">5.1: The Website or any other interface comprised in the Service may provide third-party advertisements and links to other websites. Company does not provide any Personal Information to these third-party websites or advertisers.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">5.2: The links to other websites on the Website are operated by third parties and are not controlled by, or affiliated to, or associated with, Company. Accordingly, Company does not make any representations concerning the privacy practices or policies of such third parties or terms of use of such websites, nor does Company control or guarantee the accuracy, integrity, or quality of the information, data, text, software, music, sound, photographs, graphics, videos, messages or other materials available on such websites. The inclusion or exclusion does not imply any endorsement by Company of such websites, such websites’ provider, or the information on such websites. The information provided by You to such third party websites shall be governed in accordance with the privacy policies of such websites and it is recommended that You review the privacy policy on any such websites prior to using such websites.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">6. User Discretion</h2>
+        <p style="color:var(--muted);line-height:1.6">6.1: As stated earlier, You can always choose not to provide Information, even though it might be needed by the Company for its business purposes. In such cases, if the information required is classified as mandatory, You may not be able to avail the services provided by the Company.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">7. General Provisions</h2>
+        <p style="color:var(--muted);line-height:1.6">7.1: Company may make changes to this Policy, from time to time at Company’s sole discretion or on account of changes in law. You are encouraged to check the Website frequently to see recent changes. Notwithstanding the above, Company shall not be required to notify You of any changes made to the Policy. The revised Policy shall be made available on the Website. Your continued use of the Website or the Services, following changes to the Policy, will constitute Your acceptance of those changes.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">7.2: This Privacy Policy is published in compliance with, inter alia; Section 43A of the Information Technology Act, 2000, Regulation 4 of the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Information) Rules, 2011 (the “SPI Rules”) and Regulation 3(1) of the Information Technology (Intermediaries Guidelines) Rules, 2011. if you have any grievances or concerns about Company’s Privacy Policy or if you would like to make a complaint about a possible breach of privacy in, you may contact the Grievance Officer, Mr. Vinay Katrela on 080-41248213.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">7.3: If You choose to visit the Website or avail the Services, Your visit and any dispute over privacy is subject to this Policy and the User Terms, and the application law shall be the law of the Republic of India.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">8. CONSENT TO THIS POLICY</h2>
+        <p style="color:var(--muted);line-height:1.6">8.1: You acknowledge that this Privacy Policy is a part of the Terms of Use of the Website and the other Services, and you unconditionally agree that becoming a User of the Website, the Application and its Services signifies your assent to this Privacy Policy. Your visit to the Store, use of the website and use of the Services is subject to this Privacy Policy and the Terms of Use. This Policy should be at all times read along with the User Terms of the Website. Unless stated otherwise, the Policy applies to all Information that Company has about You.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">9. Governing Laws</h2>
+        <p style="color:var(--muted);line-height:1.6">9.1: Use of www.mastermindzsportz.com shall in all respects be governed by the laws of India, regardless of the laws that might be applicable under principles of conflicts of law. These terms shall be governed by and constructed in accordance with the laws of India without reference to conflict of laws. Disputes arising in relation hereto shall be subject to the exclusive jurisdiction of the courts at Bengaluru.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:20px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">10. CONTACT INFORMATION</h2>
+        <p style="color:var(--muted);line-height:1.6">10.1: If you have questions about this Privacy Policy or use and disclosure practices, you may contact us at support@mastermindzsportz.com.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">10.2: If you have any grievance with respect to our use of your information, you may communicate such grievance to us.</p>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--line);margin:60px 0">
+
+      <!-- Section 2: Shipping, Cancellation and Refund Policy -->
+      <h1 class="title" style="font-size:36px;margin-bottom:32px">Shipping, Cancellation and Refund Policy</h1>
+      
+      <p style="color:var(--muted);line-height:1.6;margin-bottom:20px">
+        This Policy defines the terms for shipping, cancellation of the Products ordered through Store and refund of the price paid for the products ordered. The terms and conditions mentioned under the Terms of Use published at www.mastermindzsportz.com shall be read along with this policy.
+      </p>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">Shipping of Products</h2>
+        <p style="color:var(--muted);line-height:1.6">
+          Upon successful receipt of order from the User, We deliver your order as soon as possible through a third party courier service provider or any other mode of delivery of the products as deems fit by the Company. All other orders will be shipped as per the details of delivery mentioned against each of the product displayed at Store. After shipment of the Product, the tracking details of the product shall be displayed in the order page or shall be shared with the user by way of SMS or Email and estimated time for delivery of the product shall be informed to the Users.
+        </p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">
+          The product shall be shipped with proper packaging including the invoice details and delivery address as provided by the User at the time of order of the product.
+        </p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">
+          There is no online mechanism to track your orders currently. We normally deliver within the committed timelines. In case of any delays or enquiry on your order status, you can call us on 080-41248213 or write to us at support@mastermindzsportz.com.
+        </p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">Cancellation and Refund</h2>
+        <p style="color:var(--muted);line-height:1.6">
+          Once Services are ordered at Store and Products are shipped, request for cancellations or replacement of orders shall not be entertained. Company may refund or replace only in case of faulty and damaged Products.
+        </p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px;font-weight:700">Company provides refund only in case of:</p>
+        <ul style="color:var(--muted);line-height:1.6;margin-top:8px;padding-left:20px">
+          <li>Damaged or Faulty Product(s)</li>
+          <li>Wrong Product(s) delivered which are not as per your order</li>
+          <li>Cancellation of order before dispatch</li>
+        </ul>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">
+          Faulty or damaged Products must be returned within 14 days from the date of dispatch but with a prior intimation of such via email to support@mastermindzsportz.com and only after MasterMindz Sportz accepts the user’s request for return.
+        </p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">
+          The refund will be processed for the cancelled order only through the same mode of payment i.e. payment to same account which you used during the transaction. 
+        </p>
+        <ul style="color:var(--muted);line-height:1.6;margin-top:12px;padding-left:20px">
+          <li><strong>Credit card/Debit card mode:</strong> Refund processing time as per bank’s standard time frame which is approximately 8-10 business days.</li>
+          <li><strong>COD/cheque/DD mode:</strong> Refund processing time is 15-20 working days. Cheque will be made as per Billing Name provided.</li>
+        </ul>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">
+          For non delivered items, refund will be processed only on confirmation that the product was not delivered to you and you choose to take a refund and are not interested in any other product.
+        </p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">
+          The refund shall be processed with cancellation charges for all orders placed. Postage charges for return of products will not be refunded.
+        </p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">
+          The refunds will be credited to the original payment method in approximately 7-10 working days. Product will be delivered post shipping within 7-10 working days approximately.
+        </p>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--line);margin:60px 0">
+
+      <!-- Section 3: Terms and Conditions -->
+      <h1 class="title" style="font-size:36px;margin-bottom:32px">Terms and Conditions</h1>
+      
+      <p style="color:var(--muted);line-height:1.6;margin-bottom:20px;font-size:14px;font-style:italic">
+        This document is an electronic record in terms of Information Technology Act, 2000 and rules thereunder as applicable and the amended provisions pertaining to electronic records in various statutes as amended by the Information Technology Act, 2000. This electronic record is generated by a computer system and does not require any physical or digital signatures.
+      </p>
+
+      <p style="color:var(--muted);line-height:1.6;margin-bottom:20px">
+        The domain name www.mastermindzsportz.com (hereinafter referred to as the website or application) is owned by MasterMindz Sportz, a proprietorship concern having its office at 18/3, Andree Rd, Shanti Nagar, Bengaluru, Karnataka 560027 (hereinafter referred to as MasterMindz Sportz). Your use of website or application developed, managed and operated by MasterMindz Sportz (“us”, “we”, Company or “our”)are governed by these terms and conditions (“Terms”).
+      </p>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">1. DEFINITIONS</h2>
+        <p style="color:var(--muted);line-height:1.6">1.1: “Applicable Law” shall mean any statutes, laws, regulations, ordinances, rules, judgments, orders, decrees, by-laws, approval from the concerned authority, government resolution, orders, directives, guidelines, policy, requirement, or other governmental restriction.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">1.2: “Store” shall mean website or application developed, managed and hosted at the domain www.mastermindzsportz.com by the Company.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">1.3: “Services” shall mean supply of goods or services by Company to the Users at Store.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">2. USER ELIGIBILITY</h2>
+        <p style="color:var(--muted);line-height:1.6">2.1: The Store is available only to the User who can form legally binding contracts under the Applicable Law.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">2.2: The User must be at least 18 (eighteen) years of age to be eligible to use the Store.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">2.3: Company reserves the right to deny the access to Store and Services if the User is found to be not eligible.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">3. COMMUNICATION</h2>
+        <p style="color:var(--muted);line-height:1.6">3.1: You agree to receive communications via electronic records from us periodically. We may communicate with you by SMS, email or other modes.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">3.2: Electronic communications shall be deemed to have been received by you when we send it to the email address/mobile number provided by you.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">4. CONSENT TO THE TERMS</h2>
+        <p style="color:var(--muted);line-height:1.6">4.1: You need to register on the website and provide accurate information to use the full spectrum of Services.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">4.2: By clicking "Accept", you confirm your eligibility and accept these Terms, Refund Policy and the Privacy Policy.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">5. USER INFORMATION</h2>
+        <p style="color:var(--muted);line-height:1.6">5.1: Company may collect User data including name, email-id, and contact details to facilitate the Service.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">5.2: We reserve the right to terminate Service on account of misrepresentation of any information.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">5.3: Purpose of information collection includes: assist law enforcement, account management, targeted advertising, processing payments and refunds, and sending newsletters.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">6. DISCLAIMER OF WARRANTIES</h2>
+        <p style="color:var(--muted);line-height:1.6">6.1: Services are provided on an “as is” and “as available” basis without any warranties.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">6.2: Company will not be liable for any damages arising from the use of the Store.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">7. USAGE CONDITIONS</h2>
+        <p style="color:var(--muted);line-height:1.6">7.1: You agree not to authorize others to use your account or reverse engineer the Store.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">7.2: You are solely responsible for any breach of your obligations under these Terms.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">8. MODIFICATIONS</h2>
+        <p style="color:var(--muted);line-height:1.6">8.1: Prices for products are subject to change without notice. We reserve the right to modify or discontinue products at any time.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">10. BILLING AND PAYMENT</h2>
+        <p style="color:var(--muted);line-height:1.6">10.1: Options include credit cards, debit cards, cash on delivery, Wallets, and UPI.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">10.2: Redirection to bank websites for net-banking is normal. Never press the browser back button during transactions.</p>
+        <p style="color:var(--muted);line-height:1.6;margin-top:12px">10.3: If your account is debited after a failure, it will be rolled back within 7-10 working days.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">13. LIMITATION OF LIABILITY</h2>
+        <p style="color:var(--muted);line-height:1.6">Liability is limited to the consideration paid by the User in relation to access and use of the Service.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">15. GOVERNING LAW</h2>
+        <p style="color:var(--muted);line-height:1.6">Governed by the laws of India and the courts of Bengaluru shall have exclusive jurisdiction.</p>
+      </div>
+
+      <div class="policy-section" style="margin-bottom:40px">
+        <h2 style="font-size:20px;border-bottom:2px solid var(--emerald);display:inline-block;padding-bottom:4px;margin-bottom:16px">18. INTELLECTUAL PROPERTY</h2>
+        <p style="color:var(--muted);line-height:1.6">All intellectual property rights arising from the domain names and Store vest in MasterMindz Sportz.</p>
+      </div>
+    </div>
+  `;
+  return wrap;
+}
+
+function renderFooter() {
+  const foot = el('footer', 'footer', { background: '#f8fafc', padding: '60px 0 40px', borderTop: '1px solid var(--line)', marginTop: '60px' });
+  foot.innerHTML = `
+    <div class="container">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:40px;margin-bottom:40px">
+        <div>
+          <div class="nav-logo" style="margin-bottom:16px;">
+            <img src="mmz%20logo%20fin%201.png" style="width:5cm;height:1cm;object-fit:contain;">
+          </div>
+          <p style="color:var(--muted);font-size:14px;line-height:1.6">Premium snooker and billiard equipment for professionals and enthusiasts.</p>
+        </div>
+        <div>
+          <h4 style="margin-bottom:20px;font-size:16px">Shop</h4>
+          <ul style="list-style:none;padding:0;font-size:14px;display:flex;flex-direction:column;gap:10px">
+            <li><a href="#" onclick="navigate('shop')" style="color:var(--muted);text-decoration:none">All Products</a></li>
+            <li><a href="#" onclick="navigate('shop')" style="color:var(--muted);text-decoration:none">New Arrivals</a></li>
+            <li><a href="#" onclick="navigate('shop')" style="color:var(--muted);text-decoration:none">Cues</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="margin-bottom:20px;font-size:16px">Support</h4>
+          <ul style="list-style:none;padding:0;font-size:14px;display:flex;flex-direction:column;gap:10px">
+            <li><a href="#" onclick="navigate('policies')" style="color:var(--muted);text-decoration:none">Store Policies</a></li>
+            <li><a href="#" onclick="navigate('policies')" style="color:var(--muted);text-decoration:none">Returns & Refunds</a></li>
+            <li><a href="#" onclick="navigate('policies')" style="color:var(--muted);text-decoration:none">Shipping Info</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 style="margin-bottom:20px;font-size:16px">Contact</h4>
+          <p style="color:var(--muted);font-size:14px;line-height:1.6">Email: support@mastermindzs.com<br>Phone: +44 20 7946 0000</p>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--line);padding-top:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px">
+        <p style="color:var(--muted);font-size:12px">© ${new Date().getFullYear()} MasterMindz Sportz. All rights reserved.</p>
+        <div style="display:flex;gap:16px">
+          <a href="#" onclick="navigate('policies')" style="color:var(--muted);font-size:12px;text-decoration:none">Privacy Policy</a>
+          <a href="#" onclick="navigate('policies')" style="color:var(--muted);font-size:12px;text-decoration:none">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  `;
+  return foot;
+}
+
 function renderToast() {
   return null;
 }
+
 
 // ── Action Handlers ───────────────────────────────────────────
 async function doLogin() {

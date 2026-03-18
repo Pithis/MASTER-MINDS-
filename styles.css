@@ -7,9 +7,9 @@
   --text: #0f172a;
   --muted: #64748b;
   --line: #e2e8f0;
-  --emerald: #0f766e;
-  --emerald-2: #10b981;
-  --emerald-3: #064e3b;
+  --emerald: #D12200;
+  --emerald-2: #e62600;
+  --emerald-3: #9e1900;
   --night: #0b1120;
   --night-2: #111827;
   --ice: #dbeafe;
@@ -31,7 +31,7 @@ body {
   font-family: "Manrope", "Segoe UI", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(1200px 500px at 10% -10%, rgba(34, 197, 94, 0.18) 0%, transparent 60%),
+    radial-gradient(1200px 500px at 10% -10%, rgba(209, 34, 0, 0.18) 0%, transparent 60%),
     radial-gradient(900px 400px at 90% 10%, rgba(14, 165, 233, 0.14) 0%, transparent 60%),
     repeating-linear-gradient(120deg, rgba(15, 23, 42, 0.03) 0, rgba(15, 23, 42, 0.03) 1px, transparent 1px, transparent 14px),
     var(--bg);
@@ -86,8 +86,8 @@ button, input, textarea, select {
 }
 
 .badge-emerald {
-  background: #d1fae5;
-  color: #065f46;
+  background: rgba(209, 34, 0, 0.15);
+  color: #D12200;
 }
 
 .badge-amber {
@@ -127,6 +127,13 @@ button, input, textarea, select {
   font-size: 28px;
   letter-spacing: 0.02em;
   color: var(--emerald-3);
+  width: 5cm;
+  height: 1cm;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 .nav-logo span {
@@ -195,7 +202,7 @@ button, input, textarea, select {
 
 .hero-card {
   padding: 40px;
-  background: linear-gradient(135deg, #0b1120 0%, #0f172a 45%, #0f766e 100%);
+  background: linear-gradient(135deg, #0b1120 0%, #0f172a 45%, #D12200 100%);
   color: white;
   border-radius: 40px;
   position: relative;
@@ -207,7 +214,7 @@ button, input, textarea, select {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, rgba(163, 230, 53, 0.15), transparent 40%);
+  background: linear-gradient(120deg, rgba(209, 34, 0, 0.15), transparent 40%);
   pointer-events: none;
 }
 
@@ -279,7 +286,7 @@ button, input, textarea, select {
 .btn-primary {
   background: var(--emerald);
   color: white;
-  box-shadow: 0 14px 30px rgba(15, 118, 110, 0.3);
+  box-shadow: 0 14px 30px rgba(209, 34, 0, 0.3);
 }
 
 .btn-primary:hover {
@@ -366,7 +373,7 @@ button, input, textarea, select {
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: #ecfdf5;
+  background: rgba(209, 34, 0, 0.1);
   color: var(--emerald);
 }
 
@@ -384,7 +391,7 @@ button, input, textarea, select {
   position: absolute;
   width: 320px;
   height: 320px;
-  background: rgba(16, 185, 129, 0.25);
+  background: rgba(209, 34, 0, 0.25);
   filter: blur(80px);
   top: -120px;
   right: -80px;
@@ -400,8 +407,8 @@ button, input, textarea, select {
 }
 
 .input:focus {
-  border-color: #a7f3d0;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+  border-color: rgba(209, 34, 0, 0.3);
+  box-shadow: 0 0 0 4px rgba(209, 34, 0, 0.15);
   transform: translateY(-1px);
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -469,7 +476,7 @@ button, input, textarea, select {
 .sidebar a.active {
   background: var(--emerald);
   color: white;
-  box-shadow: 0 12px 24px rgba(15, 118, 110, 0.3);
+  box-shadow: 0 12px 24px rgba(209, 34, 0, 0.3);
 }
 
 .sidebar a:hover {
@@ -569,7 +576,7 @@ button, input, textarea, select {
 }
 
 /* ── Enhanced Additions ── */
-.badge-status.badge-emerald { background: #d1fae5; color: #065f46; }
+.badge-status.badge-emerald { background: rgba(209, 34, 0, 0.15); color: #D12200; }
 .badge-status.badge-amber   { background: #fef3c7; color: #92400e; }
 .badge-status.badge-blue    { background: #dbeafe; color: #1e40af; }
 .badge-status.badge-red     { background: #fee2e2; color: #b91c1c; }
