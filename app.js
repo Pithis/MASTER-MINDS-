@@ -433,7 +433,7 @@ function renderHome() {
   const featSec = el('section', 'section');
   const fI = el('div', 'container');
   fI.innerHTML = `<div class="feature-list">
-    ${[['truck', 'Free Shipping', 'On orders over £75'], ['shield-check', 'Authentic Gear', '100% genuine products'], ['rotate-ccw', 'Easy Returns', '30-day hassle-free'], ['headphones', 'Expert Support', 'Mon–Sat 9am–6pm']].map(([ic, t, s]) => `
+    ${[['truck', 'Free Shipping', 'On orders over ₹75'], ['shield-check', 'Authentic Gear', '100% genuine products'], ['rotate-ccw', 'Easy Returns', '30-day hassle-free'], ['headphones', 'Expert Support', 'Mon–Sat 9am–6pm']].map(([ic, t, s]) => `
     <div class="feature"><div class="feature-icon"><i data-lucide="${ic}" style="width:20px;height:20px"></i></div>
     <div><div style="font-weight:700;font-size:14px">${t}</div><div style="font-size:12px;color:var(--muted)">${s}</div></div></div>`).join('')}
   </div>`;
@@ -483,7 +483,7 @@ function productCardHTML(p) {
         <div style="font-size:12px;color:#f59e0b;margin:4px 0">${stars} <span style="color:var(--muted)">(${p.reviews})</span></div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">${p.desc.slice(0, 72)}…</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span class="product-price" style="font-size:20px">£${p.price.toFixed(2)}</span>
+          <span class="product-price" style="font-size:20px">₹${p.price.toFixed(2)}</span>
           <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="addToCart('${p.id}', event)">
             <i data-lucide="shopping-cart" style="width:14px;height:14px"></i> Add
           </button>
@@ -589,7 +589,7 @@ function renderCartHTML() {
             <img src="${item.image}" style="width:72px;height:72px;border-radius:12px;object-fit:cover" />
             <div style="flex:1">
               <div style="font-weight:700;margin-bottom:2px;font-size:14px">${item.name}</div>
-              <div style="color:var(--emerald);font-weight:800;font-size:16px;margin-bottom:8px">£${item.price.toFixed(2)}</div>
+              <div style="color:var(--emerald);font-weight:800;font-size:16px;margin-bottom:8px">₹${item.price.toFixed(2)}</div>
               <div style="display:flex;align-items:center;gap:8px">
                 <button class="btn btn-outline" style="padding:4px 8px;border-radius:6px;font-size:12px" onclick="cartUpdate('${item.id}',${item.qty - 1})">−</button>
                 <span style="font-weight:700;min-width:20px;text-align:center;font-size:13px">${item.qty}</span>
@@ -604,16 +604,62 @@ function renderCartHTML() {
       
       <div style="padding:24px;background:#f8fafc;border-top:1px solid var(--line);">
         <div style="display:flex;flex-direction:column;gap:12px;font-size:14px;margin-bottom:20px">
-          <div style="display:flex;justify-content:space-between"><span>Subtotal</span><strong>£${sub.toFixed(2)}</strong></div>
-          <div style="display:flex;justify-content:space-between"><span>Shipping</span><strong style="color:${ship === 0 ? 'var(--emerald)' : 'inherit'}">${ship === 0 ? 'FREE' : '£' + ship.toFixed(2)}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span>Subtotal</span><strong>₹${sub.toFixed(2)}</strong></div>
+          <div style="display:flex;justify-content:space-between"><span>Shipping</span><strong style="color:${ship === 0 ? 'var(--emerald)' : 'inherit'}">${ship === 0 ? 'FREE' : '₹' + ship.toFixed(2)}</strong></div>
           <hr style="border:none;border-top:1px dashed var(--line);margin:4px 0">
-          <div style="display:flex;justify-content:space-between;font-size:18px"><strong>Total</strong><strong style="color:var(--emerald)">£${total.toFixed(2)}</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:18px"><strong>Total</strong><strong style="color:var(--emerald)">₹${total.toFixed(2)}</strong></div>
         </div>
-        <button class="btn btn-primary" style="width:100%;padding:16px;font-size:16px;box-shadow:0 10px 20px rgba(15,118,110,0.2)" onclick="doCheckout()">
-          <i data-lucide="credit-card"></i> Proceed to Checkout
-        </button>
+        <div style="display:flex;gap:12px;">
+          <button class="btn btn-outline" style="flex:1;padding:16px;font-size:16px;" onclick="generateQuotation()">
+            <i data-lucide="file-text"></i> Quotation
+          </button>
+          <button class="btn btn-primary" style="flex:1;padding:16px;font-size:16px;box-shadow:0 10px 20px rgba(15,118,110,0.2)" onclick="doCheckout()">
+            <i data-lucide="credit-card"></i> Checkout
+          </button>
+        </div>
       </div>
     </div>`;
+}
+
+function generateQuotation() {
+  const items = Cart.get();
+  if (!items.length) return showToast('Cart is empty', 'error');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  const gstRate = parseFloat(localStorage.getItem('admin_gst') || '18');
+  const sub = Cart.total();
+  const ship = sub > 75 ? 0 : 6.99;
+  const totalRaw = sub + ship;
+  const gstAmount = totalRaw * (gstRate / 100);
+  const totalWithGst = totalRaw + gstAmount;
+
+  doc.setFontSize(20);
+  doc.text("MasterMindz Sportz - Quotation", 14, 22);
+  
+  doc.setFontSize(11);
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 30);
+  doc.text(`GST Rate: ${gstRate}%`, 14, 36);
+
+  const tableData = items.map(i => [i.name, `₹${i.price.toFixed(2)}`, i.qty, `₹${(i.price * i.qty).toFixed(2)}`]);
+  
+  doc.autoTable({
+    startY: 42,
+    head: [['Item', 'Unit Price', 'Qty', 'Total']],
+    body: tableData,
+  });
+
+  const finalY = doc.lastAutoTable.finalY || 42;
+  
+  doc.text(`Subtotal: ₹${sub.toFixed(2)}`, 140, finalY + 10);
+  doc.text(`Shipping: ${ship === 0 ? 'FREE' : '₹' + ship.toFixed(2)}`, 140, finalY + 16);
+  doc.text(`GST (${gstRate}%): ₹${gstAmount.toFixed(2)}`, 140, finalY + 22);
+  doc.setFontSize(14);
+  doc.text(`Grand Total: ₹${totalWithGst.toFixed(2)}`, 140, finalY + 30);
+  
+  doc.save("Quotation.pdf");
+  showToast("Quotation downloaded 🎱", 'success');
 }
 
 function cartUpdate(id, qty) { Cart.update(id, qty); document.getElementById('cart-drawer-panel').innerHTML = renderCartHTML(); lucide.createIcons(); }
@@ -648,7 +694,7 @@ function renderOrders() {
                 </div>
                 <span class="badge-status ${o.status === 'delivered' ? 'badge-emerald' : o.status === 'processing' ? 'badge-amber' : 'badge-blue'}">${o.status}</span>
                 <div style="text-align:right">
-                  <div style="font-size:18px;font-weight:800;color:var(--emerald)">£${o.total.toFixed(2)}</div>
+                  <div style="font-size:18px;font-weight:800;color:var(--emerald)">₹${o.total.toFixed(2)}</div>
                   <div style="font-size:12px;color:var(--muted)">${o.items.length} item(s)</div>
                 </div>
               </div>
@@ -676,7 +722,10 @@ function renderAdmin() {
   [['dashboard', 'layout-dashboard', 'Dashboard'],
   ['orders', 'package', 'Orders'],
   ['products', 'shopping-bag', 'Products'],
-  ['users', 'users', 'Members']].forEach(([tab, icon, label]) => {
+  ['users', 'users', 'Members'],
+  ['settings', 'settings', 'Settings'],
+  ['instore', 'store', 'In-Store'],
+  ['clientinfo', 'users', 'Client Info']].forEach(([tab, icon, label]) => {
     const a = mkel('a', { href: '#', class: tab === S.adminTab ? 'active' : '' },
       `<i data-lucide="${icon}" style="width:18px;height:18px"></i> ${label}`,
       () => { S.adminTab = tab; render(); });
@@ -696,6 +745,9 @@ function renderAdmin() {
   else if (S.adminTab === 'orders') content.appendChild(renderAdminOrders());
   else if (S.adminTab === 'products') content.appendChild(renderAdminProducts());
   else if (S.adminTab === 'users') content.appendChild(renderAdminUsers());
+  else if (S.adminTab === 'settings') content.appendChild(renderAdminSettings());
+  else if (S.adminTab === 'instore') content.appendChild(renderAdminInStore());
+  else if (S.adminTab === 'clientinfo') content.appendChild(renderAdminClientInfo());
   wrap.appendChild(content);
   return wrap;
 }
@@ -703,16 +755,17 @@ function renderAdmin() {
 function renderAdminDashboard() {
   const orders = S.orders || [];
   const users = S.users || [];
-  const revenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+  const validOrders = orders.filter(o => o.status !== 'cancelled' && o.status !== 'refunded');
+  const revenue = validOrders.reduce((s, o) => s + (o.total || 0), 0);
   const pending = orders.filter(o => o.status === 'processing').length;
 
-  const dailyRev = orders.filter(o => {
+  const dailyRev = validOrders.filter(o => {
     const d = new Date(o.createdAt);
     const today = new Date();
     return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
   }).reduce((s, o) => s + (o.total || 0), 0);
 
-  const monthRev = orders.filter(o => {
+  const monthRev = validOrders.filter(o => {
     const d = new Date(o.createdAt);
     const today = new Date();
     return d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
@@ -742,7 +795,7 @@ function renderAdminDashboard() {
     c.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
         <div style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:0.08em;margin-bottom:8px">${label}</div>
-        <div class="admin-counter" data-val="${val}" data-curr="${isCurrency}" style="font-size:24px;font-weight:800">${isCurrency ? '£0.00' : '0'}</div>
+        <div class="admin-counter" style="font-size:24px;font-weight:800">${isCurrency ? '₹' + Number(val).toFixed(2) : val}</div>
       </div>
       <div style="width:40px;height:40px;background:${bg};border-radius:12px;display:grid;place-items:center;color:${color}">
         <i data-lucide="${icon}" style="width:18px;height:18px"></i>
@@ -762,7 +815,7 @@ function renderAdminDashboard() {
           <td><strong>#${String(o.id).padStart(4, '0')}</strong></td>
           <td>${o.customerName}</td>
           <td>${o.items?.length} items</td>
-          <td style="color:var(--emerald);font-weight:700">£${o.total?.toFixed(2)}</td>
+          <td style="color:var(--emerald);font-weight:700">₹${o.total?.toFixed(2)}</td>
           <td><span class="badge-status ${o.status === 'delivered' ? 'badge-emerald' : o.status === 'processing' ? 'badge-amber' : 'badge-blue'}">${o.status}</span></td>
           <td style="color:var(--muted);font-size:12px">${new Date(o.createdAt).toLocaleDateString()}</td>
         </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">No orders yet</td></tr>'}</tbody>
@@ -788,7 +841,7 @@ function renderAdminOrders() {
         <td><strong>#${String(o.id).padStart(4, '0')}</strong></td>
         <td>${o.customerName}</td>
         <td style="color:var(--muted);font-size:12px">${o.customerEmail}</td>
-        <td style="color:var(--emerald);font-weight:700">£${o.total.toFixed(2)}</td>
+        <td style="color:var(--emerald);font-weight:700">₹${o.total.toFixed(2)}</td>
         <td>
           <select class="input" style="padding:6px 10px;border-radius:8px;width:130px;font-size:12px;border:1px solid var(--line)" onchange="adminUpdateOrder(${o.id},this.value)">
             ${['processing', 'shipped', 'delivered', 'cancelled'].map(s => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}
@@ -825,7 +878,7 @@ function renderAdminProducts() {
           <div><div style="font-weight:700">${p.name}</div><div style="font-size:12px;color:var(--muted)">#${p.id}</div></div>
         </div></td>
         <td><span class="badge badge-blue">${p.category}</span></td>
-        <td style="font-weight:700;color:var(--emerald)">£${p.price.toFixed(2)}</td>
+        <td style="font-weight:700;color:var(--emerald)">₹${p.price.toFixed(2)}</td>
         <td>
           <div style="display:flex;align-items:center;gap:8px">
             <button class="btn btn-outline" style="padding:4px 8px;font-size:12px" onclick="adminUpdateStock('${p.id}',-1)">−</button>
@@ -985,6 +1038,231 @@ async function adminUpdateOrder(id, status) {
   S.orders = await DB.getAll('orders');
   showToast(`Order #${String(id).padStart(4, '0')} updated to "${status}"`);
 }
+
+function renderAdminSettings() {
+  const frag = document.createDocumentFragment();
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '24px';
+  hdr.innerHTML = `<h2 class="title">Settings</h2><p class="subtitle">Manage store configuration</p>`;
+  frag.appendChild(hdr);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.padding = '24px';
+  card.style.maxWidth = '500px';
+  
+  const currentGst = localStorage.getItem('admin_gst') || '18';
+  
+  card.innerHTML = `
+    <h3 style="margin:0 0 16px">Tax Settings</h3>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">GST %</label>
+      <input class="input" id="gst-setting" type="number" step="0.1" value="${currentGst}" style="border:1px solid var(--line); max-width:200px">
+    </div>
+    <button class="btn btn-primary" onclick="adminSaveSettings()">Save Settings</button>
+  `;
+  frag.appendChild(card);
+  return frag;
+}
+
+function adminSaveSettings() {
+  const gst = document.getElementById('gst-setting').value;
+  localStorage.setItem('admin_gst', gst);
+  showToast('Settings saved successfully!');
+}
+
+function renderAdminInStore() {
+  const frag = document.createDocumentFragment();
+  const prods = S.products || [];
+  
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '24px';
+  hdr.innerHTML = `<h2 class="title">In-Store Sales</h2><p class="subtitle">Log offline point-of-sale transactions</p>`;
+  frag.appendChild(hdr);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.padding = '24px';
+  card.style.maxWidth = '600px';
+  
+  card.innerHTML = `
+    <h3 style="margin:0 0 16px">Log a Sale</h3>
+    <div style="display:grid;gap:16px;">
+      <div>
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Select Product *</label>
+        <select class="input" id="is-product" style="border:1px solid var(--line);width:100%" onchange="updateInStorePrice()">
+          <option value="">-- Choose Product --</option>
+          ${prods.map(p => `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}">${p.name} (Stock: ${p.stock}) - ₹${p.price.toFixed(2)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Quantity *</label>
+          <input class="input" id="is-qty" type="number" min="1" value="1" style="border:1px solid var(--line)" oninput="updateInStoreTotal()">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Selling Price (₹) *</label>
+          <input class="input" id="is-price" type="number" step="0.01" style="border:1px solid var(--line)" oninput="updateInStoreTotal()">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Customer Name (Optional)</label>
+        <input class="input" id="is-customer" type="text" placeholder="Walk-in Customer" style="border:1px solid var(--line)">
+      </div>
+      <div style="background:#f8fafc;padding:16px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <span style="font-weight:700">Total Transaction Value</span>
+        <span id="is-total" style="font-size:20px;font-weight:800;color:var(--emerald)">₹0.00</span>
+      </div>
+      <button class="btn btn-primary" onclick="adminSubmitInStoreSale()" style="padding:14px;margin-top:8px">
+        <i data-lucide="check-circle"></i> Complete Sale
+      </button>
+    </div>
+  `;
+  
+  frag.appendChild(card);
+  return frag;
+}
+
+window.updateInStorePrice = function() {
+  const sel = document.getElementById('is-product');
+  const opt = sel.options[sel.selectedIndex];
+  if(opt && opt.value) {
+    document.getElementById('is-price').value = parseFloat(opt.dataset.price).toFixed(2);
+    window.updateInStoreTotal();
+  } else {
+    document.getElementById('is-price').value = '';
+    document.getElementById('is-total').textContent = '₹0.00';
+  }
+};
+
+window.updateInStoreTotal = function() {
+  const qty = parseInt(document.getElementById('is-qty').value) || 0;
+  const price = parseFloat(document.getElementById('is-price').value) || 0;
+  document.getElementById('is-total').textContent = '₹' + (qty * price).toFixed(2);
+};
+
+window.adminSubmitInStoreSale = async function() {
+  const sel = document.getElementById('is-product');
+  const pid = sel.value;
+  if (!pid) return showToast('Please select a product', 'error');
+  
+  const opt = sel.options[sel.selectedIndex];
+  const maxStock = parseInt(opt.dataset.stock);
+  const qty = parseInt(document.getElementById('is-qty').value);
+  if (isNaN(qty) || qty < 1) return showToast('Invalid quantity', 'error');
+  if (qty > maxStock) return showToast('Not enough stock available', 'error');
+  
+  const price = parseFloat(document.getElementById('is-price').value);
+  if (isNaN(price) || price < 0) return showToast('Invalid price', 'error');
+
+  const cname = document.getElementById('is-customer').value.trim() || 'Offline Customer';
+  
+  // Deduct stock
+  const p = S.products.find(x => x.id === pid);
+  p.stock -= qty;
+  await DB.put('products', p);
+  
+  // Create order equivalent
+  const order = {
+    userId: 'offline', 
+    customerName: cname + ' (In-Store)',
+    customerEmail: 'in-store@mastermindzsportz.local',
+    address: 'In-Store Purchase',
+    items: [{ id: p.id, name: p.name, price: price, qty: qty, image: p.image }],
+    total: qty * price,
+    status: 'delivered',
+    createdAt: new Date().toISOString()
+  };
+  
+  await DB.put('orders', order);
+  
+  S.products = await DB.getAll('products');
+  S.orders = await DB.getAll('orders');
+  
+  showToast('In-Store sale logged successfully!');
+  render(); 
+};
+
+function renderAdminClientInfo() {
+  const frag = document.createDocumentFragment();
+  const users = S.users || [];
+  const orders = S.orders || [];
+
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '24px';
+  hdr.innerHTML = `<h2 class="title">Client Information</h2><p class="subtitle">Search and view detailed client history</p>`;
+  frag.appendChild(hdr);
+
+  const wrapper = document.createElement('div');
+  
+  wrapper.innerHTML = `
+    <div style="margin-bottom:24px;">
+      <input class="input" id="client-search" type="text" placeholder="Search by name, email, or phone..." 
+        style="border: 1px solid var(--line); max-width: 400px; padding: 12px; width: 100%; border-radius: 8px;" onkeyup="filterAdminClients(this.value)">
+    </div>
+    <div id="client-list" style="display:flex;flex-direction:column;gap:16px;">
+      ${users.map(u => {
+        const userOrders = orders.filter(o => o.userId === u.id || o.customerEmail === u.email);
+        const validUserOrders = userOrders.filter(o => o.status !== 'cancelled' && o.status !== 'refunded');
+        const totalSpent = validUserOrders.reduce((acc, curr) => acc + (curr.total || 0), 0);
+        
+        return `
+        <div class="card client-card" data-search="${(u.name + ' ' + u.email + ' ' + (u.phone||'')).toLowerCase()}" style="padding:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+            <div style="display:flex;align-items:center;gap:16px;">
+              <img src="${u.avatar}" style="width:48px;height:48px;border-radius:50%;object-fit:cover">
+              <div>
+                <strong style="font-size:16px;">${u.name}</strong>
+                <div style="font-size:13px;color:var(--muted)">${u.email} | ${u.phone || 'No phone'}</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-weight:800;font-size:18px;color:var(--emerald)">₹${totalSpent.toFixed(2)}</div>
+              <div style="font-size:12px;color:var(--muted)">Total Spent (${userOrders.length} orders)</div>
+            </div>
+          </div>
+          <div style="display:none;margin-top:20px;border-top:1px solid var(--line);padding-top:20px;">
+            <h4 style="margin:0 0 12px;">Order History</h4>
+            ${userOrders.length === 0 ? '<p style="font-size:13px;color:var(--muted)">No orders found for this client.</p>' : `
+              <table class="table" style="font-size:13px;">
+                <thead><tr><th>Order ID</th><th>Date</th><th>Items</th><th>Status</th><th>Total</th></tr></thead>
+                <tbody>
+                  ${userOrders.slice().reverse().map(o => `
+                    <tr>
+                      <td><strong>#${String(o.id).padStart(4, '0')}</strong></td>
+                      <td>${new Date(o.createdAt).toLocaleDateString()}</td>
+                      <td>${o.items.map(i => i.name + ' (x' + i.qty + ')').join(', ')}</td>
+                      <td><span class="badge-status ${o.status === 'delivered' ? 'badge-emerald' : 'badge-blue'}">${o.status}</span></td>
+                      <td style="font-weight:700">₹${o.total.toFixed(2)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `}
+          </div>
+        </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  if (!window.filterAdminClients) {
+    window.filterAdminClients = function(q) {
+      const term = q.toLowerCase();
+      document.querySelectorAll('.client-card').forEach(card => {
+        if (card.dataset.search.includes(term)) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    };
+  }
+
+  frag.appendChild(wrapper);
+  return frag;
+}
+
 // ── Right Click Role Menu ─────────────────────────────────────
 let activeUserMenu = null;
 
@@ -1107,7 +1385,7 @@ function buildQuickViewModal() {
       <h2 style="margin:0 0 16px;font-size:32px">${p.name}</h2>
       <div style="font-size:16px;color:#f59e0b;margin-bottom:20px">★ ${p.rating} <span style="color:var(--muted)">(${p.reviews} reviews)</span></div>
       <div style="font-size:15px;color:var(--muted);line-height:1.6;margin-bottom:24px">${p.desc}</div>
-      <div style="font-size:28px;font-weight:800;color:var(--emerald);margin-bottom:24px">£${p.price.toFixed(2)}</div>
+      <div style="font-size:28px;font-weight:800;color:var(--emerald);margin-bottom:24px">₹${p.price.toFixed(2)}</div>
       <button class="btn btn-primary" style="padding:16px;font-size:16px" onclick="addToCart('${p.id}', event); setState({modal:null, activeProduct:null})">
         <i data-lucide="shopping-cart"></i> Add to Cart
       </button>
@@ -1269,13 +1547,13 @@ function buildCheckoutModal() {
       </div>
     </div>
     <div style="margin-top:20px;background:#f8fafc;border-radius:14px;padding:18px">
-      <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px"><span>Subtotal</span><strong>£${sub.toFixed(2)}</strong></div>
-      <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px"><span>Shipping</span><strong style="color:${ship === 0 ? 'var(--emerald)' : 'inherit'}">${ship === 0 ? 'FREE' : '£' + ship.toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px"><span>Subtotal</span><strong>₹${sub.toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px"><span>Shipping</span><strong style="color:${ship === 0 ? 'var(--emerald)' : 'inherit'}">${ship === 0 ? 'FREE' : '₹' + ship.toFixed(2)}</strong></div>
       <hr style="border:none;border-top:1px solid var(--line)">
-      <div style="display:flex;justify-content:space-between;font-size:18px"><strong>Total</strong><strong style="color:var(--emerald)">£${(sub + ship).toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:18px"><strong>Total</strong><strong style="color:var(--emerald)">₹${(sub + ship).toFixed(2)}</strong></div>
     </div>
     <button class="btn btn-primary" id="co-submit" style="width:100%;padding:14px;margin-top:16px">
-      <i data-lucide="lock"></i> Place Order — £${(sub + ship).toFixed(2)}
+      <i data-lucide="lock"></i> Place Order — ₹${(sub + ship).toFixed(2)}
     </button>`;
   const hdr = card.querySelector('div');
   hdr.appendChild(closeBtn());
@@ -1302,7 +1580,7 @@ function buildProductModal() {
         </select>
       </div>
       <div>
-        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Price (£) *</label>
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Price (₹) *</label>
         <input class="input" id="p-price" type="number" step="0.01" placeholder="49.99" style="border:1px solid var(--line)">
       </div>
       <div>
