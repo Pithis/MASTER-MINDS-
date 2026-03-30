@@ -234,11 +234,15 @@ const Cart = (() => {
 })();
 
 function updateCartBadge() {
-  const b = document.getElementById('cart-badge');
-  if (!b) return;
   const c = Cart.count();
-  b.textContent = c;
-  b.style.display = c ? 'flex' : 'none';
+  // Desktop badge
+  const b = document.getElementById('cart-badge');
+  if (b) { b.textContent = c; b.style.display = c ? 'flex' : 'none'; }
+  // Mobile badge(s)
+  document.querySelectorAll('.nav-mobile-badge').forEach(mb => {
+    mb.textContent = c;
+    mb.style.display = c ? 'flex' : 'none';
+  });
 }
 
 // ── Seed Data ─────────────────────────────────────────────────
@@ -397,8 +401,103 @@ function renderNav() {
     actions.appendChild(si); actions.appendChild(reg);
   }
 
-  inner.appendChild(logo); inner.appendChild(links); inner.appendChild(actions);
+  /* ── Mobile: hamburger + cart icon always visible ── */
+  const mobileRight = el('div', 'nav-mobile-right');
+
+  // Mobile cart button (always visible on mobile)
+  const mCartWrap = el('div', '', { position: 'relative' });
+  const mCartBtn = mkel('button', { class: 'btn btn-outline nav-mobile-cart', style: 'padding:10px 14px' }, '', () => navigate('cart'));
+  mCartBtn.innerHTML = '<i data-lucide="shopping-cart"></i>';
+  const mBadge = mkel('span', { class: 'nav-badge nav-mobile-badge', style: `display:${Cart.count() ? 'flex' : 'none'}` }, Cart.count());
+  mCartWrap.appendChild(mCartBtn); mCartWrap.appendChild(mBadge);
+  mobileRight.appendChild(mCartWrap);
+
+  // Hamburger button
+  const hamburger = mkel('button', { class: 'nav-mobile-toggle', id: 'nav-hamburger' }, '', null);
+  hamburger.innerHTML = '<i data-lucide="menu" style="width:24px;height:24px"></i>';
+  hamburger.addEventListener('click', () => {
+    const drawer = document.getElementById('nav-mobile-drawer');
+    const isOpen = drawer && drawer.classList.contains('open');
+    if (drawer) {
+      drawer.classList.toggle('open');
+      hamburger.innerHTML = isOpen
+        ? '<i data-lucide="menu" style="width:24px;height:24px"></i>'
+        : '<i data-lucide="x" style="width:24px;height:24px"></i>';
+      lucide.createIcons();
+    }
+  });
+  mobileRight.appendChild(hamburger);
+
+  inner.appendChild(logo); inner.appendChild(links); inner.appendChild(actions); inner.appendChild(mobileRight);
   nav.appendChild(inner);
+
+  // ── Mobile Drawer ──
+  const drawer = el('div', 'nav-drawer');
+  drawer.id = 'nav-mobile-drawer';
+  const drawerInner = el('div', 'nav-drawer-inner container');
+
+  // Nav links in drawer
+  const navItems = [['home', 'Home', 'home'], ['shop', 'Shop', 'shopping-bag'], ['orders', 'My Orders', 'package']];
+  if (S.user?.role === 'admin') navItems.push(['admin', 'Admin Panel', 'settings']);
+  navItems.forEach(([p, l, icon]) => {
+    const a = mkel('a', { class: 'nav-drawer-link', href: '#' }, `<i data-lucide="${icon}" style="width:18px;height:18px"></i> ${l}`, () => {
+      navigate(p);
+      document.getElementById('nav-mobile-drawer')?.classList.remove('open');
+      const hb = document.getElementById('nav-hamburger');
+      if (hb) { hb.innerHTML = '<i data-lucide="menu" style="width:24px;height:24px"></i>'; lucide.createIcons(); }
+    });
+    drawerInner.appendChild(a);
+  });
+
+  // Separator
+  const sep = document.createElement('hr');
+  sep.style.cssText = 'border:none;border-top:1px solid var(--line);margin:12px 0;';
+  drawerInner.appendChild(sep);
+
+  // Auth actions in drawer
+  const drawerActions = el('div', 'nav-drawer-actions');
+  if (S.user) {
+    const userRow = el('div', 'nav-drawer-user');
+    userRow.innerHTML = `
+      <img src="${S.user.avatar}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+      <div>
+        <div style="font-weight:700;font-size:14px">${S.user.name}</div>
+        <div style="font-size:12px;color:var(--muted)">${S.user.email}</div>
+      </div>`;
+    drawerActions.appendChild(userRow);
+
+    const profileBtn = mkel('button', { class: 'btn btn-outline', style: 'width:100%;padding:12px;margin-top:12px' }, '<i data-lucide="user" style="width:16px;height:16px"></i> My Profile', () => {
+      setState({ modal: 'profile' });
+      document.getElementById('nav-mobile-drawer')?.classList.remove('open');
+    });
+    profileBtn.innerHTML = '<i data-lucide="user" style="width:16px;height:16px"></i> My Profile';
+    drawerActions.appendChild(profileBtn);
+
+    const logoutBtn = mkel('button', { class: 'btn btn-outline', style: 'width:100%;padding:12px;margin-top:8px;color:#b91c1c;border-color:#fecaca' }, '<i data-lucide="log-out" style="width:16px;height:16px"></i> Sign Out', () => {
+      doLogout();
+      document.getElementById('nav-mobile-drawer')?.classList.remove('open');
+    });
+    logoutBtn.innerHTML = '<i data-lucide="log-out" style="width:16px;height:16px"></i> Sign Out';
+    drawerActions.appendChild(logoutBtn);
+  } else {
+    const si = mkel('button', { class: 'btn btn-outline', style: 'width:100%;padding:14px' }, '<i data-lucide="log-in" style="width:16px;height:16px"></i> Sign In', () => {
+      setState({ modal: 'login' });
+      document.getElementById('nav-mobile-drawer')?.classList.remove('open');
+    });
+    si.innerHTML = '<i data-lucide="log-in" style="width:16px;height:16px"></i> Sign In';
+    drawerActions.appendChild(si);
+
+    const reg = mkel('button', { class: 'btn btn-primary', style: 'width:100%;padding:14px;margin-top:8px' }, '<i data-lucide="user-plus" style="width:16px;height:16px"></i> Register', () => {
+      setState({ modal: 'register' });
+      document.getElementById('nav-mobile-drawer')?.classList.remove('open');
+    });
+    reg.innerHTML = '<i data-lucide="user-plus" style="width:16px;height:16px"></i> Register';
+    drawerActions.appendChild(reg);
+  }
+  drawerInner.appendChild(drawerActions);
+  drawer.appendChild(drawerInner);
+  nav.appendChild(drawer);
+
   return nav;
 }
 
@@ -511,15 +610,11 @@ function renderShop() {
   const f = S.shopFilter || 'All';
   const filtered = f === 'All' ? prods : prods.filter(p => p.category === f);
 
-  // Calculate relative left offset for sliding tab roughly
-  const activeIdx = cats.indexOf(f);
-
   wrap.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px">
       <div><h2 class="title">Shop All Products</h2><p class="subtitle">${filtered.length} products found</p></div>
-      <div style="position:relative;display:flex;gap:8px;flex-wrap:wrap;background:white;padding:6px;border-radius:14px;border:1px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,0.02)">
-        <div class="tab-indicator" style="position:absolute;top:6px;bottom:6px;width:72px;background:var(--emerald);border-radius:10px;transition:0.3s cubic-bezier(0.4, 0, 0.2, 1);left:calc(6px + ${activeIdx * 80}px);z-index:0"></div>
-        ${cats.map(c => `<button class="btn" style="position:relative;z-index:1;padding:8px 18px;font-size:13px;background:transparent;box-shadow:none;border:none;min-width:72px;color:${f === c ? 'white' : 'var(--muted)'};transition:color 0.3s;" onclick="setShopFilter('${c}', event)">${c}</button>`).join('')}
+      <div class="shop-filter-tabs">
+        ${cats.map(c => `<button class="shop-filter-btn ${f === c ? 'active' : ''}" onclick="setShopFilter('${c}', event)">${c}</button>`).join('')}
       </div>
     </div>
     <div class="grid grid-3" id="shop-grid" style="position:relative">${filtered.length ? filtered.map(productCardHTML).join('') : Array(6).fill('<div class="card product-card" style="padding:20px"><div class="skeleton-shimmer" style="aspect-ratio:1/1;border-radius:16px;margin-bottom:20px"></div><div class="skeleton-shimmer" style="height:20px;width:70%;margin-bottom:8px"></div><div class="skeleton-shimmer" style="height:14px;width:40%"></div></div>').join('')}</div>`;
