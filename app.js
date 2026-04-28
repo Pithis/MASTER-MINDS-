@@ -6,7 +6,7 @@
 // ── IndexedDB Layer ──────────────────────────────────────────
 const DB = (() => {
   let db;
-  const DB_NAME = 'MastermindzSportzDB', DB_VER = 3;
+  const DB_NAME = 'MastermindzSportzDB', DB_VER = 4;
 
   function open() {
     return new Promise((res, rej) => {
@@ -31,6 +31,11 @@ const DB = (() => {
         }
         if (!d.objectStoreNames.contains('sessions')) {
           d.createObjectStore('sessions', { keyPath: 'token' });
+        }
+        if (!d.objectStoreNames.contains('quotations')) {
+          const qs = d.createObjectStore('quotations', { keyPath: 'id', autoIncrement: true });
+          qs.createIndex('customerName', 'customerName');
+          qs.createIndex('createdAt', 'createdAt');
         }
       };
       req.onsuccess = e => { db = e.target.result; res(db); };
@@ -101,6 +106,16 @@ const DB = (() => {
 
   return { open, put, get, del, getAll, getByIndex, clear };
 })();
+
+// ── Currency Helper ───────────────────────────────────────────
+// ── Currency Helper ───────────────────────────────────────────
+function formatINR(amount, symbol = '₹') {
+  const num = new Intl.NumberFormat('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount).replace(/\u00A0/g, ' ');
+  return `${symbol} ${num}`;
+}
 
 // ── Auth ─────────────────────────────────────────────────────
 const Auth = (() => {
@@ -3044,6 +3059,7 @@ async function seedData() {
 let S = {
   user: null, page: 'home', modal: null,
   products: [], orders: [], users: [],
+  quotations: [],
   userOrders: [],
   pendingVerify: null,
   toast: null, adminTab: 'dashboard',
@@ -3104,9 +3120,18 @@ async function navigate(page) {
 }
 
 async function loadAdminData() {
-  S.orders = await DB.getAll('orders');
-  S.users = await DB.getAll('users');
-  S.products = await DB.getAll('products');
+  try {
+    S.orders = await DB.getAll('orders');
+    S.users = await DB.getAll('users');
+    S.products = await DB.getAll('products');
+    S.quotations = await DB.getAll('quotations');
+  } catch (e) {
+    console.error("Failed to load admin data from IndexedDB", e);
+    S.orders = S.orders || [];
+    S.users = S.users || [];
+    S.products = S.products || [];
+    S.quotations = S.quotations || [];
+  }
 }
 
 // ── Render ────────────────────────────────────────────────────
@@ -3332,6 +3357,10 @@ function renderHome() {
 function productCardHTML(p) {
   const stars = '★'.repeat(Math.floor(p.rating)) + '☆'.repeat(5 - Math.floor(p.rating));
   const badgeMap = { bestseller: 'badge-emerald', new: 'badge-blue', sale: 'badge-amber' };
+  
+  const cartItem = Cart.get().find(i => i.id === p.id);
+  const qty = cartItem ? cartItem.qty : 0;
+
   return `
     <div class="card product-card">
       <div class="product-media" style="position:relative">
@@ -3346,13 +3375,19 @@ function productCardHTML(p) {
         <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">${p.desc.slice(0, 72)}…</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span class="product-price" style="font-size:20px">₹${p.price.toFixed(2)}</span>
-          <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="addToCart('${p.id}', event)">
-            <i data-lucide="shopping-cart" style="width:14px;height:14px"></i> Add
-          </button>
+          ${qty > 0 ? `
+            <div style="display:flex;align-items:center;gap:10px;background:#f8fafc;padding:4px;border-radius:12px;border:1px solid var(--line)">
+              <button class="btn btn-outline" style="width:32px;height:32px;padding:0;display:grid;place-items:center;border-radius:10px" onclick="cartUpdate('${p.id}',${qty - 1})">−</button>
+              <span style="font-weight:800;font-size:15px;min-width:24px;text-align:center">${qty}</span>
+              <button class="btn btn-outline" style="width:32px;height:32px;padding:0;display:grid;place-items:center;border-radius:10px" onclick="cartUpdate('${p.id}',${qty + 1})">+</button>
+            </div>
+          ` : `
+            <button class="btn btn-primary" style="padding:8px 14px;font-size:13px" onclick="addToCart('${p.id}', event)">
+              <i data-lucide="shopping-cart" style="width:14px;height:14px"></i> Add
+            </button>
+          `}
         </div>
-        <div style="font-size:11px;color:${p.stock < 10 ? 'var(--red)' : 'var(--emerald)'};margin-top:6px">
-          ${p.stock < 10 ? `⚠ Only ${p.stock} left` : `✓ ${p.stock} in stock`}
-        </div>
+
       </div>
     </div>`;
 }
@@ -3363,6 +3398,7 @@ function addToCart(id, event) {
   if (p.stock <= 0) return showToast('Sorry, this item is out of stock!', 'error');
   Cart.add(p);
   showToast(`${p.name} added to cart 🎱`, 'success', p.image);
+  render();
 }
 
 // ── Shop ──────────────────────────────────────────────────────
@@ -3479,6 +3515,14 @@ function renderCartHTML() {
     </div>`;
 }
 
+const BANK_DETAILS = {
+  name: "MASTER MINDZ SPORTZ PRIVATE LIMITED",
+  bank: "HDFC Bank",
+  account: "50200112673380",
+  ifsc: "HDFC0000575",
+  branch: "WEST MAMBALAM, CHENNAI"
+};
+
 function generateQuotationTrigger() {
   const items = Cart.get();
   if (!items.length) return showToast('Cart is empty', 'error');
@@ -3487,57 +3531,216 @@ function generateQuotationTrigger() {
   setState({ modal: 'quotation-info' });
 }
 
-function generateQuotation(address = "", city = "", zip = "", phoneCode = "", phone = "") {
-  const items = Cart.get();
-  if (!items.length) return showToast('Cart is empty', 'error');
+function generateQuotation(qData) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 14;
+
+  let subTotal = 0;
+  let totalGst = 0;
+
+  const addLogoAndContent = (logoBase64 = null) => {
+    // Header
+    if (logoBase64) doc.addImage(logoBase64, 'PNG', margin, 15, 45, 12);
+    else { doc.setFontSize(22); doc.setTextColor(30, 41, 59); doc.setFont(undefined, 'bold'); doc.text("MASTERMINDZ SPORTZ", margin, 22); }
+
+    doc.setFontSize(24); doc.setTextColor(30, 41, 59); doc.setFont(undefined, 'bold');
+    doc.text("QUOTATION", pageWidth - margin, 22, { align: 'right' });
+
+    // Company Info
+    doc.setFontSize(10); doc.setTextColor(30, 41, 59); doc.setFont(undefined, 'bold');
+    doc.text("MASTERMINDZ SPORTZ HQ", margin, logoBase64 ? 35 : 30);
+    doc.setFont(undefined, 'normal'); doc.setFontSize(9); doc.setTextColor(51, 65, 85);
+    doc.text(["Premium Sports Equipment & Infrastructure Solutions", "Sector 7, Business Hub, Pune - 411001", "GSTIN: 33AATCM5103G1ZK", "Email: sales@mastermindzsportz.com", "Phone: +91 98888 77777"], margin, logoBase64 ? 40 : 35);
+
+    doc.setFontSize(9); doc.setTextColor(30, 41, 59);
+    doc.text([`Quotation No: QUO-${String(qData.id).padStart(6, '0')}`, `Date: ${new Date(qData.createdAt).toLocaleDateString()}`, `Validity: 30 Days`], pageWidth - margin, 35, { align: 'right' });
+
+    doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.5); doc.line(margin, 58, pageWidth - margin, 58);
+
+    // Customer Section
+    doc.setFontSize(10); doc.setTextColor(30, 41, 59); doc.setFont(undefined, 'bold');
+    doc.text("To:", margin, 65);
+    doc.text(qData.customerName, margin, 71);
+    doc.setFont(undefined, 'normal'); doc.setTextColor(51, 65, 85);
+    let custY = 76;
+    if (qData.address) { const lines = doc.splitTextToSize(qData.address, 100); doc.text(lines, margin, custY); custY += (lines.length * 5); }
+    if (qData.city || qData.zip) { doc.text(`${qData.city}${qData.city && qData.zip ? ', ' : ''}${qData.zip}`, margin, custY); custY += 5; }
+    if (qData.phone) { doc.text(`Phone: ${qData.phoneCode} ${qData.phone}`, margin, custY); custY += 5; }
+
+    doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.setTextColor(30, 41, 59);
+    doc.text("Thank you for your valuable inquiry and we are pleased to submit our offer as below:", margin, custY + 7);
+
+    // Items Table
+    const tableHeaders = [['S.No', 'Item Description', 'Qty', 'Unit Rate', 'Amount', 'GST (18%)', 'Total']];
+    const tableBody = qData.items.map((i, idx) => {
+      const taxable = i.price * i.qty;
+      const g = taxable * 0.18;
+      const total = taxable + g;
+      subTotal += taxable; totalGst += g;
+      return [
+        (idx + 1).toString(),
+        i.name,
+        i.qty.toString(),
+        formatINR(i.price, 'Rs.'),
+        formatINR(taxable, 'Rs.'),
+        formatINR(g, 'Rs.'),
+        formatINR(total, 'Rs.')
+      ];
+    });
+
+    doc.autoTable({
+      startY: custY + 12,
+      head: tableHeaders,
+      body: tableBody,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'center' },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 50 },
+        2: { cellWidth: 10, halign: 'center' },
+        3: { cellWidth: 28, halign: 'right' },
+        4: { cellWidth: 28, halign: 'right' },
+        5: { cellWidth: 25, halign: 'right' },
+        6: { cellWidth: 32, halign: 'right' }
+      },
+      styles: { fontSize: 7.5, cellPadding: 2, valign: 'middle', font: 'helvetica', overflow: 'linebreak' },
+      margin: { left: margin, right: margin }
+    });
+
+    // Summary
+    let finalY = doc.lastAutoTable.finalY + 12;
+    const summaryX = 115; // Increased space for labels
+    const valueX = pageWidth - margin;
+    const totalWithGst = subTotal + totalGst;
+    const discAmt = qData.discount.type === 'percent' ? totalWithGst * (qData.discount.value / 100) : qData.discount.value;
+    const finalTotal = totalWithGst - discAmt;
+    const advAmt = qData.advance ? qData.advance.amount : 0;
+    const balance = finalTotal - advAmt;
+
+    const row = (label, value, y, isBold = false, color = [30, 41, 59]) => {
+      doc.setFont(undefined, isBold ? 'bold' : 'normal');
+      doc.setFontSize(isBold ? 11 : 9);
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.text(label, summaryX, y);
+      const cleanValue = value.replace(/\u00A0/g, ' ');
+      doc.text(cleanValue, valueX, y, { align: 'right' });
+    };
+
+    row("Subtotal:", formatINR(subTotal, 'Rs.'), finalY);
+    row("GST Total:", formatINR(totalGst, 'Rs.'), finalY + 8);
+    if (discAmt > 0) {
+      row(`Discount (${qData.discount.type === 'percent' ? qData.discount.value + '%' : 'Fixed'}):`, `-${formatINR(discAmt, 'Rs.')}`, finalY + 16, false, [220, 38, 38]);
+      finalY += 8;
+    }
+    
+    doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.3);
+    doc.line(summaryX, finalY + 10, valueX, finalY + 10);
+    
+    let midY = finalY + 18;
+    row("Final Total:", formatINR(finalTotal, 'Rs.'), midY, true);
+    
+    if (advAmt > 0) {
+      row("Advance Paid:", `-${formatINR(advAmt, 'Rs.')}`, midY + 8, false, [5, 150, 105]);
+      doc.setFontSize(8); doc.setTextColor(100, 116, 139);
+      let ref = `Mode: ${qData.advance.mode} | ID: ${qData.advance.details.upiId || qData.advance.details.utr || 'N/A'}`;
+      if (qData.advance.details.txDate) ref += ` | Paid On: ${new Date(qData.advance.details.txDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+      doc.text(ref, valueX, midY + 13, { align: 'right' });
+      midY += 18;
+    } else midY += 10;
+
+    doc.setDrawColor(15, 118, 110); doc.setLineWidth(0.8);
+    doc.line(summaryX, midY, valueX, midY);
+    row("Grand Total (Balance):", formatINR(balance, 'Rs.'), midY + 8, true, [15, 118, 110]);
+
+    // Update qData totals for storage
+    qData.totals = { subTotal, totalGst, discAmt, finalTotal, advAmt, grandTotal: balance };
+
+    // Footer items (Bank, T&C, Signature)
+    let detailsY = midY + 25;
+    if (detailsY > 240) { doc.addPage(); detailsY = 20; }
+    doc.setFontSize(10); doc.setTextColor(30, 41, 59); doc.setFont(undefined, 'bold'); doc.text("Bank Details", margin, detailsY);
+    doc.setFont(undefined, 'normal'); doc.setFontSize(9); doc.setTextColor(51, 65, 85);
+    doc.text([`Account Name: ${BANK_DETAILS.name}`, `Bank Name: ${BANK_DETAILS.bank}`, `Account Number: ${BANK_DETAILS.account}`, `IFSC Code: ${BANK_DETAILS.ifsc}`, `Branch: ${BANK_DETAILS.branch}`], margin, detailsY + 6);
+
+    let tcY = detailsY + 35;
+    doc.setFontSize(10); doc.setTextColor(30, 41, 59); doc.setFont(undefined, 'bold'); doc.text("Terms & Conditions", margin, tcY);
+    doc.setFont(undefined, 'normal'); doc.setFontSize(9); doc.setTextColor(51, 65, 85);
+    doc.text(["1. 100% payment after Tax Invoice submission.", "2. Transportation charges may vary based on delivery location.", "3. GST applicable as per government norms.", "4. Prices subject to stock availability.", "5. Quotation valid within the mentioned validity period."], margin, tcY + 6);
+
+    let sigY = tcY + 40; if (sigY > 260) { doc.addPage(); sigY = 20; }
+    doc.setFontSize(10); doc.setTextColor(30, 41, 59); doc.setFont(undefined, 'bold');
+    doc.text("Thanking You", margin, sigY); doc.text("For MASTERMINDZ SPORTZ", margin, sigY + 7);
+    doc.text("Authorized Signatory", pageWidth - margin - 50, sigY + 22);
+    doc.setDrawColor(226, 232, 240); doc.line(pageWidth - margin - 60, sigY + 19, pageWidth - margin, sigY + 19);
+
+    const safeName = qData.customerName.replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+    const qIdStr = `QUO-${String(qData.id).padStart(6, '0')}`;
+    doc.save(`${qIdStr}_Quotation_for_${safeName}.pdf`);
+    showToast("Quotation downloaded successfully 🎱");
+  };
+
+  if (typeof window.LOGO_BASE64 !== 'undefined') {
+    addLogoAndContent(window.LOGO_BASE64);
+  } else {
+    const logoImg = new Image(); logoImg.src = 'mmz%20logo%20fin%201.png';
+    logoImg.onload = () => {
+      const canvas = document.createElement('canvas'); canvas.width = logoImg.width; canvas.height = logoImg.height;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(logoImg, 0, 0);
+      addLogoAndContent(canvas.toDataURL('image/png'));
+    };
+    logoImg.onerror = () => addLogoAndContent();
+  }
+}
+
+function generateInvoice(order) {
+  if (!order) return showToast('Order not found', 'error');
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   
-  const sub = Cart.total();
-  const ship = sub > 75 ? 0 : 6.99;
-  
-  let totalGstAmount = 0;
-  const tableData = items.map(i => {
-    const itemGstRate = parseFloat(i.gst || 0);
-    const itemSubtotal = i.price * i.qty;
-    const itemGstAmount = itemSubtotal * (itemGstRate / 100);
-    totalGstAmount += itemGstAmount;
-    return [i.name, `₹${i.price.toFixed(2)}`, i.qty, `${itemGstRate}%`, `₹${itemSubtotal.toFixed(2)}` ];
-  });
-  
-  const totalWithGst = sub + ship + totalGstAmount;
+  const items = order.items || [];
+  const sub = items.reduce((s, i) => s + (i.price * i.qty), 0);
+  const totalGstAmount = items.reduce((s, i) => s + (i.price * i.qty * (parseFloat(i.gst || 0) / 100)), 0);
+  const totalWithGst = order.total; // Use stored total if possible, or recalculate
 
-  // Helper to add logo
   const addLogoAndContent = (logoBase64 = null) => {
     // ── Header ──────────────────────────────────────────────
     if (logoBase64) {
       doc.addImage(logoBase64, 'PNG', 14, 15, 50, 10);
     } else {
       doc.setFontSize(22);
-      doc.setTextColor(15, 118, 110);
+      doc.setTextColor(220, 38, 38);
       doc.text("MASTERMINDZ SPORTZ", 14, 22);
     }
 
     doc.setFontSize(24);
-    doc.setTextColor(15, 118, 110);
-    doc.text("QUOTATION", 200, 22, { align: 'right' });
+    doc.setTextColor(30, 41, 59);
+    doc.setFont(undefined, 'bold');
+    doc.text("TAX INVOICE", pageWidth - margin, 22, { align: 'right' });
 
     // ── Company Info ───────────────────────────────────────
+    doc.setFontSize(10);
+    doc.setTextColor(30, 41, 59);
+    doc.setFont(undefined, 'bold');
+    doc.text("MASTERMINDZ SPORTZ HQ", margin, logoBase64 ? 35 : 30);
+    
+    doc.setFont(undefined, 'normal');
     doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
+    doc.setTextColor(51, 65, 85);
     doc.text([
-      "MasterMindz Sportz HQ",
+      "Premium Sports Equipment & Infrastructure Solutions",
       "Sector 7, Business Hub, Pune - 411001",
-      "GSTIN: 27AAFCM1234A1Z5",
+      "GSTIN: 33AATCM5103G1ZK",
       "Email: sales@mastermindzsportz.com",
       "Phone: +91 98888 77777"
-    ], 14, 32);
+    ], margin, logoBase64 ? 40 : 35);
 
     doc.text([
-      `Quotation #: QUO-${Date.now().toString().slice(-6)}`,
-      `Date: ${new Date().toLocaleDateString()}`,
-      `Validity: 30 Days`
+      `Invoice #: INV-${String(order.id).padStart(4, '0')}`,
+      `Date: ${new Date(order.createdAt).toLocaleDateString()}`,
+      `Status: ${order.status.toUpperCase()}`
     ], 200, 32, { align: 'right' });
 
     // ── Customer Details ───────────────────────────────────
@@ -3546,103 +3749,146 @@ function generateQuotation(address = "", city = "", zip = "", phoneCode = "", ph
     doc.rect(14, startY, 182, 35, 'F');
     
     doc.setFontSize(11);
-    doc.setTextColor(15, 118, 110);
+    doc.setTextColor(220, 38, 38);
     doc.setFont(undefined, 'bold');
-    doc.text("DELIVER TO:", 20, startY + 8);
+    doc.text("BILL TO:", 20, startY + 8);
     
     doc.setFont(undefined, 'normal');
     doc.setFontSize(10);
     doc.setTextColor(51, 65, 85);
     
     let custY = startY + 14;
-    if (S.user) {
-      doc.text(S.user.name, 20, custY);
-      custY += 5;
-    }
-    if (address) {
-      const addrLines = doc.splitTextToSize(address, 100);
+    doc.text(order.customerName || "Customer", 20, custY);
+    custY += 5;
+    
+    if (order.address) {
+      const addrLines = doc.splitTextToSize(order.address, 140);
       doc.text(addrLines, 20, custY);
       custY += (addrLines.length * 5);
     }
-    if (city || zip) {
-      doc.text(`${city}${city && zip ? ', ' : ''}${zip}`, 20, custY);
-      custY += 5;
-    }
-    if (phone) {
-      doc.text(`Phone: ${phoneCode} ${phone}`, 20, custY);
+    if (order.customerPhone) {
+      doc.text(`Phone: ${order.customerPhone}`, 20, custY);
     }
 
     // ── Items Table ────────────────────────────────────────
     doc.autoTable({
       startY: startY + 45,
-      head: [['Product Description', 'Unit Price', 'Qty', 'GST %', 'Subtotal']],
-      body: tableData,
+      head: [['S.No', 'Product Description', 'Unit Price', 'Qty', 'GST %', 'Subtotal']],
+      body: items.map((i, idx) => [
+        (idx + 1).toString(),
+        i.name,
+        `Rs. ${i.price.toFixed(2)}`,
+        i.qty.toString(),
+        `${parseFloat(i.gst || 0)}%`,
+        `Rs. ${(i.price * i.qty).toFixed(2)}`
+      ]),
       theme: 'striped',
-      headStyles: { fillColor: [15, 118, 110], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', fontSize: 9 },
       columnStyles: {
-        0: { cellWidth: 80 },
-        4: { halign: 'right' }
+        0: { cellWidth: 18, halign: 'center' },
+        1: { cellWidth: 72 },
+        2: { cellWidth: 28, halign: 'right' },
+        3: { cellWidth: 12, halign: 'center' },
+        4: { cellWidth: 20, halign: 'right' },
+        5: { cellWidth: 32, halign: 'right' }
       },
-      styles: { fontSize: 9, cellPadding: 4 }
+      styles: { fontSize: 9, cellPadding: 3, valign: 'middle', font: 'helvetica' }
     });
 
     // ── Summary ───────────────────────────────────────────
-    const finalY = doc.lastAutoTable.finalY + 10;
+    const finalY = doc.lastAutoTable.finalY + 15;
     
+    // Bank Details
     doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
-    doc.text("Payment Terms: 100% Advance", 14, finalY + 5);
-    doc.text("Delivery: Within 3-5 working days", 14, finalY + 11);
-
-    const summaryX = 140;
+    doc.setTextColor(220, 38, 38);
+    doc.setFont(undefined, 'bold');
+    doc.text("BANK DETAILS:", 14, finalY + 5);
+    doc.setFont(undefined, 'normal');
     doc.setTextColor(51, 65, 85);
-    doc.text("Subtotal:", summaryX, finalY + 5);
-    doc.text(`₹${sub.toFixed(2)}`, 200, finalY + 5, { align: 'right' });
+    doc.setFontSize(9);
+    doc.text([
+      `Account: ${BANK_DETAILS.name}`,
+      `Bank: ${BANK_DETAILS.bank} | Branch: ${BANK_DETAILS.branch}`,
+      `A/C No: ${BANK_DETAILS.account}`,
+      `IFSC: ${BANK_DETAILS.ifsc}`
+    ], 14, finalY + 12);
+
+    const summaryX = 135;
+    const valueX = 200;
+    doc.setTextColor(51, 65, 85);
+    doc.setFontSize(10);
     
-    doc.text("Shipping:", summaryX, finalY + 11);
-    doc.text(`${ship === 0 ? 'FREE' : '₹' + ship.toFixed(2)}`, 200, finalY + 11, { align: 'right' });
-    
-    doc.text("Estimated GST:", summaryX, finalY + 17);
-    doc.text(`₹${totalGstAmount.toFixed(2)}`, 200, finalY + 17, { align: 'right' });
+    const addSummaryRow = (label, value, y, isBold = false) => {
+      doc.setFont(undefined, isBold ? 'bold' : 'normal');
+      doc.text(label, summaryX, y);
+      doc.text(value, valueX, y, { align: 'right' });
+    };
+
+    addSummaryRow("Subtotal:", `Rs. ${sub.toFixed(2)}`, finalY + 5);
+    addSummaryRow("GST Amount:", `Rs. ${totalGstAmount.toFixed(2)}`, finalY + 13);
 
     doc.setDrawColor(226, 232, 240);
-    doc.line(summaryX, finalY + 21, 200, finalY + 21);
+    doc.setLineWidth(0.5);
+    doc.line(summaryX, finalY + 18, 200, finalY + 18);
 
     doc.setFontSize(14);
-    doc.setTextColor(15, 118, 110);
-    doc.setFont(undefined, 'bold');
-    doc.text("Grand Total:", summaryX, finalY + 28);
-    doc.text(`₹${totalWithGst.toFixed(2)}`, 200, finalY + 28, { align: 'right' });
+    doc.setTextColor(220, 38, 38);
+    addSummaryRow("Grand Total:", `Rs. ${totalWithGst.toFixed(2)}`, finalY + 28, true);
 
     // ── Footer ────────────────────────────────────────────
     doc.setFontSize(8);
     doc.setFont(undefined, 'normal');
     doc.setTextColor(148, 163, 184);
-    doc.text("This is a computer-generated quotation and does not require a physical signature.", 105, 285, { align: 'center' });
-    doc.text("Thank you for choosing MasterMindz Sportz! 🎱", 105, 290, { align: 'center' });
+    doc.text("This is a computer-generated invoice and does not require a physical signature.", 105, 285, { align: 'center' });
+    doc.text("Thank you for your business!", 105, 290, { align: 'center' });
 
-    doc.save(`Quotation_${Date.now().toString().slice(-6)}.pdf`);
-    showToast("Premium Quotation downloaded 🎱", 'success');
+    doc.save(`Invoice_${order.id}.pdf`);
+    showToast("Invoice downloaded successfully 🎱", 'success');
   };
 
   // Attempt to load logo
-  const logoImg = new Image();
-  logoImg.src = 'mmz%20logo%20fin%201.png';
-  logoImg.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = logoImg.width;
-    canvas.height = logoImg.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(logoImg, 0, 0);
-    addLogoAndContent(canvas.toDataURL('image/png'));
-  };
-  logoImg.onerror = () => {
-    addLogoAndContent(); // Fallback without logo
-  };
+  if (typeof window.LOGO_BASE64 !== 'undefined') {
+    addLogoAndContent(window.LOGO_BASE64);
+  } else {
+    const logoImg = new Image();
+    logoImg.src = 'mmz%20logo%20fin%201.png';
+    logoImg.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = logoImg.width;
+      canvas.height = logoImg.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(logoImg, 0, 0);
+      addLogoAndContent(canvas.toDataURL('image/png'));
+    };
+    logoImg.onerror = () => {
+      addLogoAndContent(); // Fallback without logo
+    };
+  }
 }
 
-function cartUpdate(id, qty) { Cart.update(id, qty); document.getElementById('cart-drawer-panel').innerHTML = renderCartHTML(); lucide.createIcons(); }
-function cartRemove(id) { Cart.remove(id); document.getElementById('cart-drawer-panel').innerHTML = renderCartHTML(); lucide.createIcons(); }
+function generateInvoiceTrigger(orderId) {
+  const order = S.orders?.find(o => o.id === orderId) || S.userOrders?.find(o => o.id === orderId);
+  if (order) {
+    generateInvoice(order);
+  } else {
+    showToast('Order details not found', 'error');
+  }
+}
+
+function cartUpdate(id, qty) { 
+  Cart.update(id, qty); 
+  const panel = document.getElementById('cart-drawer-panel');
+  if (panel) panel.innerHTML = renderCartHTML(); 
+  lucide.createIcons(); 
+  render(); 
+}
+function cartRemove(id) { 
+  Cart.remove(id); 
+  const panel = document.getElementById('cart-drawer-panel');
+  if (panel) panel.innerHTML = renderCartHTML(); 
+  lucide.createIcons(); 
+  render(); 
+}
 
 function doCheckout() {
   toggleCartDrawer(false);
@@ -3672,16 +3918,20 @@ function renderOrders() {
                   <div style="font-size:13px;color:var(--muted)">${new Date(o.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
                 </div>
                 <span class="badge-status ${o.status === 'delivered' ? 'badge-emerald' : o.status === 'processing' ? 'badge-amber' : 'badge-blue'}">${o.status}</span>
-                <div style="text-align:right">
                   <div style="font-size:18px;font-weight:800;color:var(--emerald)">₹${o.total.toFixed(2)}</div>
                   <div style="font-size:12px;color:var(--muted)">${o.items.length} item(s)</div>
                 </div>
               </div>
-              <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line);display:flex;gap:12px;flex-wrap:wrap">
-                ${o.items.map(i => `<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;padding:8px 12px;border-radius:10px">
-                  <img src="${i.image}" style="width:36px;height:36px;border-radius:8px;object-fit:cover">
-                  <span style="font-size:13px;font-weight:600">${i.name} ×${i.qty}</span>
-                </div>`).join('')}
+              <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap">
+                  ${o.items.map(i => `<div style="display:flex;align-items:center;gap:8px;background:#f8fafc;padding:8px 12px;border-radius:10px">
+                    <img src="${i.image}" style="width:36px;height:36px;border-radius:8px;object-fit:cover">
+                    <span style="font-size:13px;font-weight:600">${i.name} ×${i.qty}</span>
+                  </div>`).join('')}
+                </div>
+                <button class="btn btn-outline" style="padding:8px 16px;font-size:13px" onclick="generateInvoiceTrigger(${o.id})">
+                  <i data-lucide="download"></i> Invoice
+                </button>
               </div>
               <div style="margin-top:12px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px">
                 <div>📍 Address: ${o.address}</div>
@@ -3698,18 +3948,19 @@ function renderAdmin() {
   const sidebar = el('div', 'sidebar');
   const logo = el('div', 'nav-logo');
   logo.style.marginBottom = '32px';
-  logo.innerHTML = '<img src="mmz%20logo%20fin%201.png" style="height:24px;margin-right:8px;vertical-align:middle;display:inline-block;">MASTERMINDZ<br><span style="color:var(--text);font-weight:400;font-size:16px;">SPORTZ</span>';
+  logo.innerHTML = '<img src="mmz%20logo%20fin%201.png" style="height:28px;object-fit:contain;cursor:pointer" onclick="navigate(\'home\')">';
   sidebar.appendChild(logo);
 
   [['dashboard', 'layout-dashboard', 'Dashboard'],
   ['orders', 'package', 'Orders'],
+  ['quotations', 'file-text', 'Quotations'],
   ['products', 'shopping-bag', 'Products'],
   ['users', 'users', 'Members'],
   ['instore', 'store', 'In-Store'],
   ['clientinfo', 'users', 'Client Info']].forEach(([tab, icon, label]) => {
     const a = mkel('a', { href: '#', class: tab === S.adminTab ? 'active' : '' },
       `<i data-lucide="${icon}" style="width:18px;height:18px"></i> ${label}`,
-      () => { S.adminTab = tab; render(); });
+      async () => { S.adminTab = tab; await loadAdminData(); render(); });
     a.innerHTML = `<i data-lucide="${icon}" style="width:18px;height:18px"></i> ${label}`;
     sidebar.appendChild(a);
   });
@@ -3724,6 +3975,7 @@ function renderAdmin() {
   const content = el('div', 'admin-content');
   if (S.adminTab === 'dashboard') content.appendChild(renderAdminDashboard());
   else if (S.adminTab === 'orders') content.appendChild(renderAdminOrders());
+  else if (S.adminTab === 'quotations') content.appendChild(renderAdminQuotations());
   else if (S.adminTab === 'products') content.appendChild(renderAdminProducts());
   else if (S.adminTab === 'users') content.appendChild(renderAdminUsers());
   else if (S.adminTab === 'instore') content.appendChild(renderAdminInStore());
@@ -3830,12 +4082,130 @@ function renderAdminOrders() {
             ${['processing', 'shipped', 'delivered', 'cancelled'].map(s => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
         </td>
-        <td style="color:var(--muted);font-size:12px">${new Date(o.createdAt).toLocaleDateString()}</td>
+        <td style="color:var(--muted);font-size:12px">
+          <div>${new Date(o.createdAt).toLocaleDateString()}</div>
+          <button class="btn" style="padding:4px;background:#f1f5f9;margin-top:4px" onclick="generateInvoiceTrigger(${o.id})">
+            <i data-lucide="file-text" style="width:14px;height:14px"></i>
+          </button>
+        </td>
       </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">No orders</td></tr>'}</tbody>
   </table>`;
   frag.appendChild(card);
   return frag;
 }
+
+function renderAdminQuotations() {
+  const quotes = S.quotations || [];
+  const frag = document.createDocumentFragment();
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '24px';
+  hdr.style.display = 'flex';
+  hdr.style.justifyContent = 'space-between';
+  hdr.style.alignItems = 'flex-end';
+  hdr.innerHTML = `
+    <div><h2 class="title">Quotations</h2><p class="subtitle">${quotes.length} total generated quotations</p></div>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-outline" onclick="adminDownloadFilteredQuotations()"><i data-lucide="download"></i> Download All</button>
+    </div>`;
+  frag.appendChild(hdr);
+
+  // Filters
+  const filters = document.createElement('div');
+  filters.style.cssText = 'display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;';
+  filters.innerHTML = `
+    <div>
+      <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Month</label>
+      <select class="input" id="q-filter-month" onchange="applyQuotationFilters()" style="width:120px">
+        <option value="">All Months</option>
+        ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => `<option value="${i}">${m}</option>`).join('')}
+      </select>
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Year</label>
+      <select class="input" id="q-filter-year" onchange="applyQuotationFilters()" style="width:100px">
+        <option value="">All</option>
+        ${[2024, 2025, 2026].map(y => `<option value="${y}">${y}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div>
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">From</label>
+        <input class="input" id="q-filter-from" type="date" onchange="applyQuotationFilters()">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">To</label>
+        <input class="input" id="q-filter-to" type="date" onchange="applyQuotationFilters()">
+      </div>
+    </div>
+    <button class="btn btn-outline" onclick="resetQuotationFilters()" style="padding:10px;height:42px"><i data-lucide="rotate-ccw" style="width:16px"></i></button>
+  `;
+  frag.appendChild(filters);
+
+  const card = document.createElement('div');
+  card.className = 'card'; card.style.overflow = 'hidden';
+  card.innerHTML = `<table class="table" id="quotations-table">
+    <thead><tr><th>ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Actions</th></tr></thead>
+    <tbody id="quotations-body">${renderQuotationTableRows(quotes)}</tbody>
+  </table>`;
+  frag.appendChild(card);
+  return frag;
+}
+
+function renderQuotationTableRows(quotes) {
+  return quotes.slice().reverse().map(q => `
+    <tr class="quotation-row" data-date="${q.createdAt}">
+      <td><strong>QUO-${String(q.id).padStart(6, '0')}</strong></td>
+      <td><strong>${q.customerName}</strong></td>
+      <td style="color:var(--muted);font-size:13px">${new Date(q.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+      <td style="font-weight:700;color:var(--emerald)">${formatINR(q.totals?.grandTotal || 0, 'Rs.')}</td>
+      <td>
+        <div style="display:flex;gap:8px">
+          <button class="btn" style="padding:6px;background:#f1f5f9;color:#64748b;border-radius:8px" onclick="editQuotationTrigger(${q.id})">
+            <i data-lucide="edit-2" style="width:14px;height:14px"></i>
+          </button>
+          <button class="btn" style="padding:6px;background:#f1f5f9;color:#64748b;border-radius:8px" onclick="downloadQuotationTrigger(${q.id})">
+            <i data-lucide="download" style="width:14px;height:14px"></i>
+          </button>
+        </div>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted)">No quotations found</td></tr>';
+}
+
+window.applyQuotationFilters = function() {
+  const month = document.getElementById('q-filter-month').value;
+  const year = document.getElementById('q-filter-year').value;
+  const from = document.getElementById('q-filter-from').value;
+  const to = document.getElementById('q-filter-to').value;
+
+  const rows = document.querySelectorAll('.quotation-row');
+  rows.forEach(row => {
+    const d = new Date(row.dataset.date);
+    let show = true;
+    if (month && d.getMonth() != month) show = false;
+    if (year && d.getFullYear() != year) show = false;
+    if (from && d < new Date(from)) show = false;
+    if (to && d > new Date(to)) show = false;
+    row.style.display = show ? 'table-row' : 'none';
+  });
+};
+
+window.resetQuotationFilters = function() {
+  document.getElementById('q-filter-month').value = '';
+  document.getElementById('q-filter-year').value = '';
+  document.getElementById('q-filter-from').value = '';
+  document.getElementById('q-filter-to').value = '';
+  applyQuotationFilters();
+};
+
+window.adminDownloadFilteredQuotations = function() {
+  const visibleRows = Array.from(document.querySelectorAll('.quotation-row')).filter(r => r.style.display !== 'none');
+  if (!visibleRows.length) return showToast('No quotations to download', 'error');
+  showToast(`Downloading ${visibleRows.length} quotations...`);
+  visibleRows.forEach((row, i) => {
+    const id = parseInt(row.querySelector('button').getAttribute('onclick').match(/\d+/)[0]);
+    setTimeout(() => downloadQuotationTrigger(id), i * 300);
+  });
+};
 
 function renderAdminProducts() {
   const prods = S.products || [];
@@ -4354,9 +4724,7 @@ function buildQuickViewModal() {
       <button class="btn btn-primary" style="padding:16px;font-size:16px" onclick="addToCart('${p.id}', event); setState({modal:null, activeProduct:null})">
         <i data-lucide="shopping-cart"></i> Add to Cart
       </button>
-      <div style="margin-top:16px;font-size:13px;color:${p.stock < 10 ? 'var(--red)' : 'var(--emerald)'};text-align:center">
-        ${p.stock < 10 ? '⚠ Only ' + p.stock + ' units left in stock!' : '✓ In Stock and ready to ship'}
-      </div>
+
     </div>
   `;
   return card;
@@ -4565,8 +4933,13 @@ function buildCheckoutModal() {
 function buildQuotationInfoModal() {
   const card = document.createElement('div');
   card.className = 'modal-card';
-  card.style.width = 'min(500px, 95vw)';
   const ad = AddressStore.get();
+  const isAdmin = S.user && S.user.role === 'admin';
+  const editMode = !!S.activeQuotation;
+  const cartItems = (editMode ? S.activeQuotation.items : Cart.get()) || [];
+
+  if (isAdmin) card.classList.add('modal-card-large');
+  
   const countryCodes = [
     { code: '+91', name: 'India' },
     { code: '+1', name: 'US/Canada' },
@@ -4575,47 +4948,382 @@ function buildQuotationInfoModal() {
     { code: '+61', name: 'Australia' }
   ];
 
+  let adminSections = '';
+  if (isAdmin) {
+    adminSections = `
+      <div style="margin-top:24px;padding-top:24px;border-top:2px solid var(--line);">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <!-- Left Column: Products -->
+          <div>
+            <h3 style="margin:0 0 16px;font-size:18px;color:var(--primary)">Product Details</h3>
+            <div style="display:flex;flex-direction:column;gap:12px;max-height:400px;overflow-y:auto;padding-right:8px">
+              ${cartItems.map((item, idx) => `
+                <div class="card" style="padding:12px;border:1px solid var(--line);background:#f8fafc">
+                  <div style="font-weight:700;font-size:13px;margin-bottom:8px">${item.name}</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                      <label style="font-size:10px;font-weight:700;color:var(--muted)">Price (₹)</label>
+                      <input class="input admin-calc-input p-price" data-idx="${idx}" type="number" value="${item.price}" style="padding:6px;font-size:12px">
+                    </div>
+                    <div>
+                      <label style="font-size:10px;font-weight:700;color:var(--muted)">Quantity</label>
+                      <input class="input admin-calc-input p-qty" data-idx="${idx}" type="number" min="1" value="${item.qty}" style="padding:6px;font-size:12px">
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Right Column: Discounts & Advance -->
+          <div>
+            <h3 style="margin:0 0 16px;font-size:18px;color:var(--primary)">Financial Controls</h3>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:8px">
+              <div>
+                <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Discount</label>
+                <input class="input admin-calc-input" id="admin-discount" type="number" min="0" step="0.01" placeholder="Max 50% allowed" value="${editMode ? S.activeQuotation.discount.value : 0}" style="border:1px solid var(--line)">
+              </div>
+              <div>
+                <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Type</label>
+                <select class="input admin-calc-input" id="admin-discount-type" style="border:1px solid var(--line)">
+                  <option value="fixed" ${editMode && S.activeQuotation.discount.type === 'fixed' ? 'selected' : ''}>Fixed (₹)</option>
+                  <option value="percent" ${editMode && S.activeQuotation.discount.type === 'percent' ? 'selected' : ''}>Percent (%)</option>
+                </select>
+              </div>
+            </div>
+            <div id="discount-error" class="error-text" style="margin-bottom:16px;min-height:16px"></div>
+
+            <div style="margin-bottom:20px">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;cursor:pointer">
+                <input type="checkbox" id="admin-advance-toggle" ${editMode && S.activeQuotation.advance ? 'checked' : ''} style="width:16px;height:16px">
+                Advance Payment Received
+              </label>
+            </div>
+
+            <div id="admin-advance-section" style="display:${editMode && S.activeQuotation.advance ? 'flex' : 'none'};flex-direction:column;gap:16px;background:#f0fdf4;padding:16px;border-radius:12px;border:1px solid #bbf7d0">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                <div>
+                  <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Advance Amount</label>
+                  <div style="position:relative">
+                    <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)">₹</span>
+                    <input class="input admin-calc-input" id="admin-advance-amount" type="number" min="0" step="0.01" placeholder="Cannot exceed total" value="${editMode && S.activeQuotation.advance ? S.activeQuotation.advance.amount : 0}" style="padding-left:24px;border:1px solid #86efac">
+                  </div>
+                </div>
+                <div>
+                  <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">Mode</label>
+                  <select class="input" id="admin-pay-mode" style="border:1px solid #86efac">
+                    ${['Cash', 'UPI', 'Bank Transfer'].map(m => `<option value="${m}" ${editMode && S.activeQuotation.advance && S.activeQuotation.advance.mode === m ? 'selected' : ''}>${m}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div id="admin-pay-details" style="display:grid;grid-template-columns:1fr 1fr;gap:14px"></div>
+              <div id="advance-error" class="error-text"></div>
+            </div>
+
+            <!-- Live Totals Summary -->
+            <div class="admin-totals-grid" style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02)">
+              <div style="margin-bottom:12px; opacity: 0.7"><span>SUBTOTAL</span><span id="live-subtotal">₹ 0.00</span></div>
+              <div style="margin-bottom:12px; opacity: 0.7"><span>GST (18%)</span><span id="live-gst">₹ 0.00</span></div>
+              <div style="margin-bottom:12px; color: #ef4444"><span>DISCOUNT</span><span id="live-discount">₹ 0.00</span></div>
+              <div style="padding-top:12px; border-top: 1px solid #f1f5f9; margin-bottom:12px"><span style="font-weight:700">FINAL TOTAL</span><span id="live-final" class="final-total-bold">₹ 0.00</span></div>
+              <div style="margin-bottom:12px; color: #059669"><span>ADVANCE</span><span id="live-advance">₹ 0.00</span></div>
+              <div style="padding-top:12px; border-top: 1px dashed #e2e8f0"><span style="font-weight:700">BALANCE</span><span id="live-balance" class="grand-total-highlight">₹ 0.00</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   card.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
-      <h2 style="margin:0;font-size:24px">Quotation Details</h2>
+      <h2 style="margin:0;font-size:24px">${editMode ? 'Edit Quotation' : 'Quotation Details'}</h2>
     </div>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:20px">Please provide delivery info to include in your quotation.</p>
-    <div style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:grid;grid-template-columns:${isAdmin ? '1fr 1fr' : '1fr'};gap:24px">
       <div>
-        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Delivery Address</label>
-        <textarea class="input" id="quote-addr" rows="3" placeholder="Flat/House No, Street, Landmark" style="border:1px solid var(--line);min-height:80px;resize:none">${ad.addr || ''}</textarea>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div>
-          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">City</label>
-          <input class="input" id="quote-city" placeholder="e.g. Pune" value="${ad.city || ''}" style="border:1px solid var(--line)">
-        </div>
-        <div>
-          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Postal Code</label>
-          <input class="input" id="quote-zip" placeholder="e.g. 411001" value="${ad.zip || ''}" style="border:1px solid var(--line)">
+        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Customer Name *</label>
+        <input class="input" id="quote-cust-name" placeholder="Enter Full Name" value="${editMode ? S.activeQuotation.customerName : ''}" style="border:1px solid var(--line)">
+        <div style="margin-top:16px">
+          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Delivery Address</label>
+          <textarea class="input" id="quote-addr" rows="3" placeholder="Street, City, Zip" style="border:1px solid var(--line);min-height:80px;resize:none">${editMode ? S.activeQuotation.address : ad.addr || ''}</textarea>
         </div>
       </div>
       <div>
-        <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Phone Number</label>
-        <div style="display:flex;gap:8px">
-          <select class="input" id="quote-phone-code" style="width:100px;border:1px solid var(--line)">
-            ${countryCodes.map(c => `<option value="${c.code}" ${ad.phoneCode === c.code ? 'selected' : ''}>${c.code}</option>`).join('')}
-          </select>
-          <input class="input" id="quote-phone" type="tel" placeholder="00000 00000" value="${ad.phone || ''}" style="flex:1;border:1px solid var(--line)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div>
+            <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">City</label>
+            <input class="input" id="quote-city" placeholder="e.g. Pune" value="${editMode ? S.activeQuotation.city : ad.city || ''}" style="border:1px solid var(--line)">
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Postal Code</label>
+            <input class="input" id="quote-zip" placeholder="e.g. 411001" value="${editMode ? S.activeQuotation.zip : ad.zip || ''}" style="border:1px solid var(--line)">
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Phone Number</label>
+          <div style="display:flex;gap:8px">
+            <select class="input" id="quote-phone-code" style="width:100px;border:1px solid var(--line)">
+              ${countryCodes.map(c => `<option value="${c.code}" ${editMode ? (S.activeQuotation.phoneCode === c.code ? 'selected' : '') : (ad.phoneCode === c.code ? 'selected' : '')}>${c.code}</option>`).join('')}
+            </select>
+            <input class="input" id="quote-phone" type="tel" placeholder="Phone" value="${editMode ? S.activeQuotation.phone : ad.phone || ''}" style="flex:1;border:1px solid var(--line)">
+          </div>
         </div>
       </div>
     </div>
-    <div style="display:flex;gap:12px;margin-top:24px">
-      <button class="btn btn-outline" style="flex:1" onclick="setState({modal:null})">Cancel</button>
-      <button class="btn btn-primary" style="flex:2" onclick="const a=document.getElementById('quote-addr').value; const c=document.getElementById('quote-city').value; const z=document.getElementById('quote-zip').value; const pc=document.getElementById('quote-phone-code').value; const p=document.getElementById('quote-phone').value; AddressStore.save({addr:a, city:c, zip:z, phoneCode:pc, phone:p}); generateQuotation(a, c, z, pc, p); setState({modal:null});">
-        Generate PDF
+    ${adminSections}
+    <div style="display:flex;gap:12px;margin-top:32px">
+      <button class="btn btn-outline" style="flex:1" onclick="S.activeQuotation=null; setState({modal:null})">Cancel</button>
+      <button class="btn btn-primary" id="generate-quote-btn" style="flex:2">
+        <i data-lucide="${editMode ? 'save' : 'download'}"></i> ${editMode ? 'Update Quotation' : 'Generate & Download PDF'}
       </button>
     </div>
   `;
+
+  if (isAdmin) {
+    const toggle = card.querySelector('#admin-advance-toggle');
+    const advanceSection = card.querySelector('#admin-advance-section');
+    const payMode = card.querySelector('#admin-pay-mode');
+    const payDetails = card.querySelector('#admin-pay-details');
+
+    const updatePayDetails = () => {
+      const mode = payMode.value;
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const minDate = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}-${String(sixMonthsAgo.getDate()).padStart(2, '0')}`;
+      
+      const d = (editMode && S.activeQuotation.advance && S.activeQuotation.advance.mode === mode) ? S.activeQuotation.advance.details : {};
+      const dateVal = d.txDate || today;
+      
+      const dateInputHtml = (id) => `
+        <div>
+          <label style="font-size:10px;font-weight:700;display:block;margin-bottom:4px">Tx Date *</label>
+          <input class="input" id="${id}" type="date" value="${dateVal}" max="${today}" min="${minDate}" style="padding:6px;font-size:12px">
+        </div>`;
+
+      if (mode === 'Cash') {
+        payDetails.innerHTML = `<div style="grid-column: 1/-1">${dateInputHtml('admin-tx-date')}</div>`;
+      } else if (mode === 'UPI') {
+        payDetails.innerHTML = `
+          <div><label style="font-size:10px;font-weight:700;display:block;margin-bottom:4px">UPI ID *</label><input class="input" id="admin-upi-id" value="${d.upiId || ''}" placeholder="12-digit ID" style="padding:6px;font-size:12px"></div>
+          ${dateInputHtml('admin-tx-date')}`;
+      } else if (mode === 'Bank Transfer') {
+        payDetails.innerHTML = `
+          <div><label style="font-size:10px;font-weight:700;display:block;margin-bottom:4px">UTR No *</label><input class="input" id="admin-utr" value="${d.utr || ''}" placeholder="UTR..." style="padding:6px;font-size:12px"></div>
+          ${dateInputHtml('admin-tx-date')}
+          <div style="grid-column: 1/-1"><label style="font-size:10px;font-weight:700;display:block;margin-bottom:4px">Bank (Optional)</label><input class="input" id="admin-bank-name" value="${d.bankName || ''}" placeholder="Bank Name" style="padding:6px;font-size:12px"></div>`;
+      }
+    };
+
+    toggle.onchange = () => { 
+      const isChecked = toggle.checked;
+      advanceSection.style.display = isChecked ? 'flex' : 'none'; 
+      if (isChecked) updatePayDetails();
+      window.recalculateAdminTotals(); 
+    };
+    payMode.onchange = updatePayDetails;
+    if (editMode && S.activeQuotation.advance) updatePayDetails();
+    else if (!editMode) updatePayDetails(); // Initialize for fresh quotes too
+
+    card.querySelectorAll('.admin-calc-input').forEach(input => {
+      input.oninput = () => window.recalculateAdminTotals();
+    });
+
+    window.recalculateAdminTotals = function() {
+      let sub = 0;
+      card.querySelectorAll('.p-price').forEach((inp, idx) => {
+        const qty = parseFloat(card.querySelectorAll('.p-qty')[idx].value) || 0;
+        sub += (parseFloat(inp.value) || 0) * qty;
+      });
+      const gst = sub * 0.18;
+      const totalWithGst = sub + gst;
+      
+      const discVal = parseFloat(card.querySelector('#admin-discount').value) || 0;
+      const discType = card.querySelector('#admin-discount-type').value;
+      const discAmt = discType === 'percent' ? totalWithGst * (Math.min(discVal, 50) / 100) : Math.min(discVal, totalWithGst);
+      
+      const final = Math.max(0, totalWithGst - discAmt);
+      const advEnabled = card.querySelector('#admin-advance-toggle').checked;
+      const advAmt = advEnabled ? Math.max(0, parseFloat(card.querySelector('#admin-advance-amount').value) || 0) : 0;
+      
+      const discInput = card.querySelector('#admin-discount');
+      const discErr = card.querySelector('#discount-error');
+      const advInput = card.querySelector('#admin-advance-amount');
+      const advErr = card.querySelector('#advance-error');
+      const submitBtn = card.querySelector('#generate-quote-btn');
+
+      let hasError = false;
+
+      // Discount Validation
+      if (discType === 'percent') {
+        if (discVal > 50) {
+          discInput.classList.add('input-error');
+          discErr.textContent = 'Discount rate cannot exceed 50%. Please enter a valid value';
+          hasError = true;
+        } else {
+          discInput.classList.remove('input-error');
+          discErr.textContent = '';
+        }
+      } else {
+        const maxAllowed = totalWithGst * 0.5;
+        if (discVal > maxAllowed) {
+          discInput.classList.add('input-error');
+          discErr.textContent = `Discount amount cannot exceed 50% of total bill (Max: ₹ ${new Intl.NumberFormat('en-IN').format(maxAllowed)})`;
+          hasError = true;
+        } else {
+          discInput.classList.remove('input-error');
+          discErr.textContent = '';
+        }
+      }
+
+      // Advance Validation
+      if (advEnabled) {
+        if (advAmt > final) {
+          advInput.classList.add('input-error');
+          advErr.textContent = 'Advance amount cannot exceed total payable amount';
+          hasError = true;
+        } else {
+          advInput.classList.remove('input-error');
+          advErr.textContent = '';
+        }
+      } else {
+        advInput.classList.remove('input-error');
+        advErr.textContent = '';
+      }
+
+      submitBtn.disabled = hasError;
+      submitBtn.style.opacity = hasError ? '0.5' : '1';
+      submitBtn.style.cursor = hasError ? 'not-allowed' : 'pointer';
+
+      document.getElementById('live-subtotal').textContent = formatINR(sub);
+      document.getElementById('live-gst').textContent = formatINR(gst);
+      document.getElementById('live-discount').textContent = formatINR(discAmt);
+      document.getElementById('live-final').textContent = formatINR(final);
+      document.getElementById('live-advance').textContent = formatINR(advAmt);
+      document.getElementById('live-balance').textContent = formatINR(Math.max(0, final - advAmt));
+    };
+    setTimeout(window.recalculateAdminTotals, 0);
+  }
+
+  card.querySelector('#generate-quote-btn').onclick = async () => {
+    const custName = card.querySelector('#quote-cust-name').value.trim();
+    if (!custName) return showToast('Customer Name is required', 'error');
+
+    const a = card.querySelector('#quote-addr').value;
+    const c = card.querySelector('#quote-city').value;
+    const z = card.querySelector('#quote-zip').value;
+    const pc = card.querySelector('#quote-phone-code').value;
+    const p = card.querySelector('#quote-phone').value;
+
+    AddressStore.save({ addr: a, city: c, zip: z, phoneCode: pc, phone: p });
+
+    let adminData = null;
+    const finalItems = [];
+    if (isAdmin) {
+      card.querySelectorAll('.p-price').forEach((inp, idx) => {
+        const qty = parseFloat(card.querySelectorAll('.p-qty')[idx].value) || 0;
+        const price = parseFloat(inp.value) || 0;
+        finalItems.push({ ...cartItems[idx], price, qty });
+      });
+
+      const discountValue = parseFloat(card.querySelector('#admin-discount').value) || 0;
+      const discountType = card.querySelector('#admin-discount-type').value;
+      
+      if (discountType === 'percent' && discountValue > 50) return showToast('Maximum discount allowed is 50%', 'error');
+
+      const advanceEnabled = card.querySelector('#admin-advance-toggle').checked;
+      let advance = null;
+      if (advanceEnabled) {
+        const amount = parseFloat(card.querySelector('#admin-advance-amount').value) || 0;
+        const mode = card.querySelector('#admin-pay-mode').value;
+        const txDate = card.querySelector('#admin-tx-date')?.value;
+        if (amount <= 0) return showToast('Please enter a valid advance amount', 'error');
+        
+        let details = { txDate };
+        if (mode === 'UPI') {
+          details.upiId = card.querySelector('#admin-upi-id').value;
+          if (!details.upiId) return showToast('UPI Transaction ID is required', 'error');
+        } else if (mode === 'Bank Transfer') {
+          details.utr = card.querySelector('#admin-utr').value;
+          details.bankName = card.querySelector('#admin-bank-name').value;
+          if (!details.utr) return showToast('UTR Number is required', 'error');
+        }
+        advance = { amount, mode, details };
+      }
+      adminData = { discount: { value: discountValue, type: discountType }, advance };
+    }
+
+    // Calculate Totals for storage
+    let sub = 0;
+    const itemsToCalc = isAdmin ? finalItems : cartItems;
+    itemsToCalc.forEach(i => sub += i.price * i.qty);
+    const gst = sub * 0.18;
+    const totalWithGst = sub + gst;
+    const discVal = isAdmin ? (parseFloat(card.querySelector('#admin-discount').value) || 0) : 0;
+    const discType = isAdmin ? card.querySelector('#admin-discount-type').value : 'fixed';
+    const discAmt = discType === 'percent' ? totalWithGst * (Math.min(discVal, 50) / 100) : Math.min(discVal, totalWithGst);
+    const final = Math.max(0, totalWithGst - discAmt);
+    const advAmt = (isAdmin && adminData.advance) ? adminData.advance.amount : 0;
+
+    const qData = {
+      customerName: custName,
+      address: a, city: c, zip: z, phoneCode: pc, phone: p,
+      items: isAdmin ? finalItems : cartItems,
+      discount: isAdmin ? adminData.discount : { value: 0, type: 'fixed' },
+      advance: isAdmin ? adminData.advance : null,
+      totals: { subTotal: sub, totalGst: gst, discAmt, finalTotal: final, advAmt, grandTotal: final - advAmt },
+      createdAt: editMode ? S.activeQuotation.createdAt : new Date().toISOString()
+    };
+    if (editMode) {
+      qData.id = S.activeQuotation.id;
+    }
+
+    const savedId = await saveQuotation(qData);
+    qData.id = savedId;
+    
+    generateQuotation(qData);
+    S.activeQuotation = null;
+    setState({ modal: null });
+    if (S.adminTab === 'quotations') {
+      try {
+        S.quotations = await DB.getAll('quotations');
+      } catch (e) {
+        console.error("IndexedDB fetch failed", e);
+      }
+      render();
+    }
+  };
+
   const hdr = card.querySelector('div');
   hdr.appendChild(closeBtn());
   return card;
 }
+
+async function saveQuotation(data) {
+  try {
+    const id = await DB.put('quotations', data);
+    return id;
+  } catch (e) {
+    console.error("IndexedDB Save failed", e);
+    return Date.now();
+  }
+}
+
+window.editQuotationTrigger = async function(id) {
+  const q = await DB.get('quotations', id);
+  if (q) {
+    S.activeQuotation = q;
+    setState({ modal: 'quotation-info' });
+  }
+};
+
+window.downloadQuotationTrigger = async function(id) {
+  const q = await DB.get('quotations', id);
+  if (q) generateQuotation(q);
+};
+
 
 function buildProductModal() {
   const p = S.activeProduct;
@@ -5235,13 +5943,25 @@ styleTag.textContent = `
     [style*="grid-template-columns:1fr 340px"]{grid-template-columns:1fr!important}
     [style*="grid-template-columns:repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr)!important}
   }
+  .modal-card-large { width: min(900px, 95vw) !important; max-height: 90vh !important; overflow-y: auto !important; }
+  .admin-totals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid var(--line); margin-top: 16px; }
+  .admin-totals-grid div { display: flex; flex-direction: column; }
+  .admin-totals-grid span:first-child { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .admin-totals-grid span:last-child { font-size: 18px; font-weight: 800; color: var(--emerald); }
 `;
 document.head.appendChild(styleTag);
 
 (async () => {
   await seedData();
   S.user = await Auth.currentUser();
-  if (S.user) S.userOrders = await DB.getAll('orders', 'userId', S.user.id);
+  if (S.user) {
+    S.userOrders = await DB.getAll('orders', 'userId', S.user.id);
+    if (S.user.role === 'admin') {
+      S.orders = await DB.getAll('orders');
+      S.users = await DB.getAll('users');
+      S.quotations = await DB.getAll('quotations');
+    }
+  }
   S.products = await DB.getAll('products');
   render();
 })();
