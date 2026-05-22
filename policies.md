@@ -58,9 +58,9 @@ We stand behind the quality of our equipment.
 ---
 
 ## 6. Payment Policy
-*   **Accepted Methods:** We accept major credit/debit cards (Visa, MasterCard, American Express) and secure digital payments (PayPal, Apple Pay, Google Pay).
-*   **Security:** Your payment information is encrypted and processed through secure, PCI-compliant payment gateways. We do not store your full card details on our servers.
-*   **Order Confirmation:** You will receive an automated email confirmation immediately after a successful payment.
+*   **Accepted Methods:** All storefront orders and quotation requests are processed and finalized directly via **WhatsApp** (contacting us at 6369031250). Upon submitting your checkout form, you will be redirected to WhatsApp with your compiled quotation.
+*   **Security:** Order details are transmitted securely and stored locally inside your browser's IndexedDB. Official transactions and secure bank transfers are finalized directly during our WhatsApp checkout chat.
+*   **Order Confirmation:** You will receive immediate order confirmation and shipping updates from our team via WhatsApp and email once the quotation is accepted.
 
 ---
 
