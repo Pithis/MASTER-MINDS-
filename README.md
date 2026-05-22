@@ -9,11 +9,13 @@ Designed with a rich, modern, dark-accented aesthetic, the user interface featur
 ## 🚀 Key Features
 
 ### 🛒 High-End Storefront Experience
-- **Interactive Product Catalog:** Filter seamlessly by curated luxury categories: *Cues, Cases, Tables, Balls,* and *Accessories*.
+- **Interactive Product Catalog:** Filter seamlessly by 16 curated product categories: *Chalk, Chalk Holder, Cues, Tips, Tips Accessories, Ball Set, Ball Accessories, Cue Cases & Covers, Cue Accessories, Cloth, Cloth Accessories, Player's Accessories, Table Accessories, Tables,* and *Accessories*.
+- **Two-Level Filtering System:** A scrollable main category bar with an animated secondary sub-category chip row that reveals brand/type filters (e.g., Cue brands: *LP, Omin, Apex, Maximus, Phoenix*; Ball brands: *Aramith, JDH, Saphire, Baekeland*, etc.).
 - **Advanced Sorting & Searching:** Instantly search through products in real time and sort by price (low to high/high to low), rating, and popularity.
 - **Product Details Modals:** An immersive popup interface providing high-resolution product imagery, stock availability, ratings, review counts, detailed technical descriptions, and instant add-to-cart controls.
 - **Dynamic Cart Side Drawer:** Manages items in real time, displaying item counts, subtotal, and quantities directly from the navigation bar badge.
 - **Persistent Address Register:** Caches user shipping details, contact phone numbers, and local postal zip codes directly within the browser for a swift checkout.
+- **Product Badges:** Products can be tagged with *New* (blue), *Bestseller* (green), or **Sale** (vibrant orange-red gradient) badges displayed on product cards.
 
 ### 💼 Integrated POS (Point-of-Sale) & Document Engine
 - **In-Store Billing Suite:** Allows store administrators to construct dynamic invoices or quotations from scratch.
@@ -32,8 +34,12 @@ Designed with a rich, modern, dark-accented aesthetic, the user interface featur
 - **Admin Access Level:** Special administrative features unlocked exclusively for the executive root login (`tobi268820@gmail.com`).
 - **Dashboard Analytics:** Comprehensive statistical cards displaying *Gross Revenue*, *Completed Order Count*, *Registered Customers*, *Active Product Range*, and *Pending Shipments*.
 - **Order Tracking Console:** Real-time filterable tables of all purchases where admins can update shipping status (*Pending, Processing, Shipped, Delivered, Cancelled*) with instant database synchronization.
+- **Quotation Manager (Admin):** Dedicated **Quotations** tab in the admin panel listing every customer-generated quotation. Admins can:
+  - **Edit line-item prices** per product directly in the browser with live subtotal recalculation.
+  - **Save updated prices** back to IndexedDB for accurate records.
+  - **Download a PDF** of the (edited) quotation directly from the admin panel with the corporate logo, customer details, and updated totals — without needing the customer to regenerate.
 - **CSV Data Exporter:** One-click functionality to download the entire transactional log of orders as a standard CSV spreadsheet.
-- **Inventory Controller:** Dynamic stock increment/decrement, item deletion, full editing, and creation of new product specifications.
+- **Inventory Controller:** Dynamic stock increment/decrement, item deletion, full editing, and creation of new product specifications. The product form now supports all 15 categories plus the new *Sale* badge option.
 - **User Register Control:** Overview of all registered clients with capabilities to edit profile data and toggle administrative roles.
 
 ---
@@ -72,7 +78,7 @@ MASTER-MINDS--main 4/
 
 ## 💾 Database Architecture (IndexedDB Schema)
 
-On database boot, the application initializes or upgrades a client-side database named `MastermindzSportzDB` (Version 4). The schema consists of six key Object Stores:
+On database boot, the application initializes or upgrades a client-side database named `MastermindzSportzDB` (**Version 4**). The schema consists of **seven** key Object Stores:
 
 ```mermaid
 erDiagram
@@ -125,6 +131,7 @@ erDiagram
     quotations {
         int id PK
         string customerName
+        string customerEmail
         string address
         string city
         string zip
@@ -133,6 +140,7 @@ erDiagram
         array items
         double total
         string createdAt
+        string status
     }
 
     users ||--o{ orders : "places"
@@ -241,6 +249,34 @@ logoImg.onload = () => {
 };
 ```
 This guarantees crisp, offline-capable corporate branding in all generated documents.
+
+---
+
+## 📋 Changelog
+
+### v4.0 — May 2026
+**🗂️ Category & Filtering Overhaul**
+- Replaced the flat 5-category filter with a comprehensive **16-category taxonomy** mapped to the official product spreadsheet.
+- Added a **two-level filter system**: a scrollable horizontal main category bar + an animated secondary sub-category chip row that auto-appears for categories with brand/type variants.
+- Sub-category brand filters for: *Cues* (LP, Omin, Apex, Maximus, Phoenix), *Tips* (11 brands), *Ball Set* (7 brands), *Cloth* (PNS, Strachan, Super Pool, Wiraka), *Tables* (5 types), *Table Accessories* (5 types), *Player's Accessories* (Gloves, Towel).
+- Sub-filter row slides in with a smooth animation and auto-resets when switching main categories.
+- Product count subtitle dynamically reflects active category and sub-filter state.
+
+**📋 Admin Quotation Manager**
+- New **Quotations** sidebar tab in the Admin Panel.
+- All customer-generated quotations are now automatically saved to IndexedDB (`quotations` store, DB v4).
+- Admins can **edit line-item unit prices** in-browser with live subtotal and grand total recalculation.
+- **Save & Update** persists edited prices back to the database.
+- **Download PDF** generates a fully branded, logo-embedded quotation PDF directly from the admin panel — named `QUO-XXXX_CustomerName.pdf`.
+
+**🏷️ Sale Badge**
+- Added a vibrant **Sale** badge type (orange-to-red gradient with white text and glow shadow).
+- Available alongside *New* and *Bestseller* in the product form and displayed on product cards.
+- Product modal category dropdown updated to include all 15 categories.
+
+**🗃️ Database**
+- IndexedDB schema upgraded from **Version 3 → Version 4**.
+- New `quotations` object store added (auto-increment ID key, stores customer info, line items, totals, and status).
 
 ---
 
