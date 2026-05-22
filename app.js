@@ -6,7 +6,7 @@
 // ── IndexedDB Layer ──────────────────────────────────────────
 const DB = (() => {
   let db;
-  const DB_NAME = 'MastermindzSportzDB', DB_VER = 3;
+  const DB_NAME = 'MastermindzSportzDB', DB_VER = 4;
 
   function open() {
     return new Promise((res, rej) => {
@@ -31,6 +31,9 @@ const DB = (() => {
         }
         if (!d.objectStoreNames.contains('sessions')) {
           d.createObjectStore('sessions', { keyPath: 'token' });
+        }
+        if (!d.objectStoreNames.contains('quotations')) {
+          d.createObjectStore('quotations', { keyPath: 'id', autoIncrement: true });
         }
       };
       req.onsuccess = e => { db = e.target.result; res(db); };
@@ -3336,16 +3339,31 @@ function renderHome() {
 
 function productCardHTML(p) {
   const stars = '★'.repeat(Math.floor(p.rating)) + '☆'.repeat(5 - Math.floor(p.rating));
-  const badgeMap = { bestseller: 'badge-emerald', new: 'badge-blue', sale: 'badge-amber' };
+  const badgeMap = { bestseller: 'badge-emerald', new: 'badge-blue', sale: 'badge-sale' };
   
   const cartItem = Cart.get().find(i => i.id === p.id);
   const qty = cartItem ? cartItem.qty : 0;
+
+  // Sale pricing
+  const isSale = p.badge === 'sale' && p.salePercent > 0;
+  const salePrice = isSale ? p.price * (1 - p.salePercent / 100) : p.price;
+  const saleLabel = isSale ? (p.saleName || 'SALE') : '';
+  const displayCartPrice = isSale ? salePrice : p.price;
+
+  const priceHTML = isSale ? `
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="product-price-old">₹${p.price.toFixed(2)}</span>
+        <span class="badge badge-sale" style="font-size:10px;padding:2px 8px">${p.salePercent}% OFF</span>
+      </div>
+      <span class="product-price" style="font-size:20px">₹${salePrice.toFixed(2)}</span>
+    </div>` : `<span class="product-price" style="font-size:20px">₹${p.price.toFixed(2)}</span>`;
 
   return `
     <div class="card product-card">
       <div class="product-media" style="position:relative">
         <img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" />
-        ${p.badge ? `<span class="badge ${badgeMap[p.badge] || 'badge-blue'}" style="position:absolute;top:12px;left:12px">${p.badge.toUpperCase()}</span>` : ''}
+        ${p.badge ? `<span class="badge ${badgeMap[p.badge] || 'badge-blue'}" style="position:absolute;top:12px;left:12px">${isSale ? (saleLabel.toUpperCase()) : p.badge.toUpperCase()}</span>` : ''}
         <button class="btn btn-primary quick-view-btn" onclick="openQuickView('${p.id}')">Quick View</button>
       </div>
       <div class="product-body">
@@ -3354,7 +3372,7 @@ function productCardHTML(p) {
         <div style="font-size:12px;color:#f59e0b;margin:4px 0">${stars} <span style="color:var(--muted)">(${p.reviews})</span></div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">${p.desc.slice(0, 72)}…</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span class="product-price" style="font-size:20px">₹${p.price.toFixed(2)}</span>
+          ${priceHTML}
           ${qty > 0 ? `
             <div style="display:flex;align-items:center;gap:10px;background:#f8fafc;padding:4px;border-radius:12px;border:1px solid var(--line)">
               <button class="btn btn-outline" style="width:32px;height:32px;padding:0;display:grid;place-items:center;border-radius:10px" onclick="cartUpdate('${p.id}',${qty - 1})">−</button>
@@ -3367,7 +3385,6 @@ function productCardHTML(p) {
             </button>
           `}
         </div>
-
       </div>
     </div>`;
 }
@@ -3562,6 +3579,18 @@ function generateQuotationTrigger() {
 function generateQuotation(address = "", city = "", zip = "", phoneCode = "", phone = "") {
   const items = Cart.get();
   if (!items.length) return showToast('Cart is empty', 'error');
+
+  // Save quotation to DB for admin access
+  const quotationRecord = {
+    customerName: S.user ? S.user.name : 'Guest',
+    customerEmail: S.user ? S.user.email : '',
+    address, city, zip, phoneCode, phone,
+    items: items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, gst: i.gst || 0, image: i.image })),
+    total: items.reduce((s, i) => s + i.price * i.qty, 0),
+    createdAt: new Date().toISOString(),
+    status: 'pending'
+  };
+  DB.put('quotations', quotationRecord).catch(() => {});
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -3999,13 +4028,14 @@ function renderAdmin() {
 
   [['dashboard', 'layout-dashboard', 'Dashboard'],
   ['orders', 'package', 'Orders'],
+  ['quotations', 'file-text', 'Quotations'],
   ['products', 'shopping-bag', 'Products'],
   ['users', 'users', 'Members'],
   ['instore', 'store', 'In-Store'],
   ['clientinfo', 'users', 'Client Info']].forEach(([tab, icon, label]) => {
     const a = mkel('a', { href: '#', class: tab === S.adminTab ? 'active' : '' },
       `<i data-lucide="${icon}" style="width:18px;height:18px"></i> ${label}`,
-      () => { S.adminTab = tab; render(); });
+      () => { S.adminTab = tab; if (tab === 'quotations') { DB.getAll('quotations').then(q => { S.quotations = q.reverse(); render(); }); } else render(); });
     a.innerHTML = `<i data-lucide="${icon}" style="width:18px;height:18px"></i> ${label}`;
     sidebar.appendChild(a);
   });
@@ -4020,6 +4050,7 @@ function renderAdmin() {
   const content = el('div', 'admin-content');
   if (S.adminTab === 'dashboard') content.appendChild(renderAdminDashboard());
   else if (S.adminTab === 'orders') content.appendChild(renderAdminOrders());
+  else if (S.adminTab === 'quotations') content.appendChild(renderAdminQuotations());
   else if (S.adminTab === 'products') content.appendChild(renderAdminProducts());
   else if (S.adminTab === 'users') content.appendChild(renderAdminUsers());
   else if (S.adminTab === 'instore') content.appendChild(renderAdminInStore());
@@ -4136,6 +4167,252 @@ function renderAdminOrders() {
   </table>`;
   frag.appendChild(card);
   return frag;
+}
+
+// ── Admin Quotations ─────────────────────────────────────────
+function renderAdminQuotations() {
+  const frag = document.createDocumentFragment();
+  const quotations = S.quotations || [];
+
+  const hdr = document.createElement('div');
+  hdr.style.marginBottom = '24px';
+  hdr.innerHTML = `
+    <h2 class="title">Quotations</h2>
+    <p class="subtitle">${quotations.length} quotation${quotations.length !== 1 ? 's' : ''} generated</p>`;
+  frag.appendChild(hdr);
+
+  if (!quotations.length) {
+    const empty = document.createElement('div');
+    empty.className = 'card';
+    empty.style.cssText = 'padding:60px;text-align:center;color:var(--muted)';
+    empty.innerHTML = `<div style="font-size:48px;margin-bottom:16px">📋</div><h3 style="margin:0 0 8px">No Quotations Yet</h3><p style="margin:0">Quotations generated by customers will appear here.</p>`;
+    frag.appendChild(empty);
+    return frag;
+  }
+
+  quotations.forEach((q, qIndex) => {
+    const qCard = document.createElement('div');
+    qCard.className = 'card';
+    qCard.style.cssText = 'margin-bottom:20px;overflow:hidden;';
+
+    const sub = (q.items || []).reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseInt(i.qty) || 0), 0);
+    const gstTotal = (q.items || []).reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseInt(i.qty) || 0) * (parseFloat(i.gst) || 0) / 100, 0);
+    const quoNum = `QUO-${String(q.id || qIndex + 1).padStart(4, '0')}`;
+
+    qCard.innerHTML = `
+      <div style="padding:20px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--line)">
+        <div>
+          <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Quotation</div>
+          <div style="font-weight:800;font-size:18px">${quoNum}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px">
+            ${q.customerName || 'Guest'} ${q.customerEmail ? '· ' + q.customerEmail : ''}
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${new Date(q.createdAt).toLocaleString()}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:24px;font-weight:800;color:var(--emerald)">₹${sub.toFixed(2)}</div>
+          <div style="font-size:12px;color:var(--muted)">Subtotal (excl. GST)</div>
+          <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+            <button class="btn" style="padding:8px 16px;font-size:13px;background:#f1f5f9;color:#334155;border-radius:10px" 
+              onclick="adminToggleQuotationEdit(${q.id || qIndex})">
+              <i data-lucide="edit-2" style="width:14px;height:14px"></i> Edit Amounts
+            </button>
+            <button class="btn btn-primary" style="padding:8px 16px;font-size:13px;border-radius:10px" 
+              onclick="adminDownloadQuotationPDF(${q.id || qIndex})">
+              <i data-lucide="download" style="width:14px;height:14px"></i> Download PDF
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="quot-edit-${q.id || qIndex}" style="display:none;padding:20px;background:#f8fafc">
+        <h4 style="margin:0 0 16px;font-size:14px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted)">Edit Line Item Prices</h4>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${(q.items || []).map((item, iIdx) => `
+            <div style="display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;background:white;padding:12px;border-radius:10px;border:1px solid var(--line)">
+              <div>
+                <div style="font-weight:700;font-size:14px">${item.name}</div>
+                <div style="font-size:12px;color:var(--muted)">Qty: ${item.qty} · GST: ${item.gst || 0}%</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:13px;color:var(--muted)">₹</span>
+                <input type="number" step="0.01" min="0"
+                  id="qedit-${q.id || qIndex}-${iIdx}"
+                  value="${parseFloat(item.price).toFixed(2)}"
+                  style="width:100px;padding:8px;border:1px solid var(--line);border-radius:8px;font-weight:700;font-size:14px"
+                  oninput="adminRecalcQuotation(${q.id || qIndex})">
+              </div>
+              <div style="font-size:14px;font-weight:700;color:var(--emerald);min-width:80px;text-align:right" 
+                id="qline-${q.id || qIndex}-${iIdx}">
+                ₹${(parseFloat(item.price) * parseInt(item.qty)).toFixed(2)}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div style="margin-top:16px;padding:16px;background:white;border-radius:10px;border:1px solid var(--line);display:flex;justify-content:flex-end;gap:32px;align-items:center">
+          <div style="text-align:right">
+            <div style="font-size:12px;color:var(--muted)">Updated Subtotal</div>
+            <div id="qsub-${q.id || qIndex}" style="font-size:22px;font-weight:800;color:var(--emerald)">₹${sub.toFixed(2)}</div>
+          </div>
+          <button class="btn btn-primary" style="padding:10px 20px" onclick="adminSaveQuotationEdits(${q.id || qIndex}, ${(q.items||[]).length})">
+            <i data-lucide="save" style="width:14px;height:14px"></i> Save &amp; Update
+          </button>
+        </div>
+      </div>
+      <div style="padding:16px 20px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#f8fafc">
+            <th style="padding:8px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase">Product</th>
+            <th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Unit Price</th>
+            <th style="padding:8px;text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase">Qty</th>
+            <th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">GST</th>
+            <th style="padding:8px;text-align:right;font-size:11px;color:var(--muted);text-transform:uppercase">Line Total</th>
+          </tr></thead>
+          <tbody>
+            ${(q.items||[]).map(item => `
+              <tr style="border-top:1px solid var(--line)">
+                <td style="padding:10px 8px;font-weight:600">${item.name}</td>
+                <td style="padding:10px 8px;text-align:right">₹${parseFloat(item.price).toFixed(2)}</td>
+                <td style="padding:10px 8px;text-align:center">${item.qty}</td>
+                <td style="padding:10px 8px;text-align:right">${item.gst || 0}%</td>
+                <td style="padding:10px 8px;text-align:right;font-weight:700">₹${(parseFloat(item.price) * parseInt(item.qty)).toFixed(2)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${q.address ? `<div style="padding:12px 20px;background:#f8fafc;border-top:1px solid var(--line);font-size:13px;color:var(--muted)">
+        <strong style="color:var(--text)">Deliver to:</strong> ${q.customerName} · ${q.address}, ${q.city} ${q.zip} · ${q.phoneCode || ''} ${q.phone || ''}
+      </div>` : ''}`;
+
+    frag.appendChild(qCard);
+  });
+
+  // Attach helper functions to window
+  window.adminToggleQuotationEdit = function(qId) {
+    const el = document.getElementById(`quot-edit-${qId}`);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    lucide.createIcons();
+  };
+
+  window.adminRecalcQuotation = function(qId) {
+    const q = (S.quotations || []).find(x => x.id === qId);
+    if (!q) return;
+    let newSub = 0;
+    (q.items || []).forEach((item, iIdx) => {
+      const inp = document.getElementById(`qedit-${qId}-${iIdx}`);
+      const price = parseFloat(inp?.value) || 0;
+      const lineTotal = price * parseInt(item.qty);
+      newSub += lineTotal;
+      const lineEl = document.getElementById(`qline-${qId}-${iIdx}`);
+      if (lineEl) lineEl.textContent = '₹' + lineTotal.toFixed(2);
+    });
+    const subEl = document.getElementById(`qsub-${qId}`);
+    if (subEl) subEl.textContent = '₹' + newSub.toFixed(2);
+  };
+
+  window.adminSaveQuotationEdits = async function(qId, itemCount) {
+    const q = (S.quotations || []).find(x => x.id === qId);
+    if (!q) return;
+    const updatedItems = (q.items || []).map((item, iIdx) => {
+      const inp = document.getElementById(`qedit-${qId}-${iIdx}`);
+      return { ...item, price: parseFloat(inp?.value) || item.price };
+    });
+    q.items = updatedItems;
+    q.total = updatedItems.reduce((s, i) => s + parseFloat(i.price) * parseInt(i.qty), 0);
+    await DB.put('quotations', q);
+    S.quotations = (await DB.getAll('quotations')).reverse();
+    showToast('Quotation prices updated ✅', 'success');
+    render();
+  };
+
+  window.adminDownloadQuotationPDF = function(qId) {
+    const q = (S.quotations || []).find(x => x.id === qId);
+    if (!q) return;
+    generateAdminQuotationPDF(q);
+  };
+
+  return frag;
+}
+
+function generateAdminQuotationPDF(q) {
+  if (!window.jspdf) return showToast('PDF engine not loaded', 'error');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const items = q.items || [];
+  const sub = items.reduce((s, i) => s + parseFloat(i.price) * parseInt(i.qty), 0);
+  const gstTotal = items.reduce((s, i) => s + parseFloat(i.price) * parseInt(i.qty) * (parseFloat(i.gst) || 0) / 100, 0);
+  const grandTotal = sub + gstTotal;
+  const quoNum = `QUO-${String(q.id).padStart(4, '0')}`;
+
+  const addContent = (logoBase64 = null) => {
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', 14, 15, 50, 10);
+    } else {
+      doc.setFontSize(20); doc.setTextColor(220, 38, 38);
+      doc.text('MASTERMINDZ SPORTZ', 14, 22);
+    }
+    doc.setFontSize(22); doc.setTextColor(220, 38, 38);
+    doc.text('QUOTATION', 200, 22, { align: 'right' });
+
+    doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+    doc.text(['MasterMindz Sportz HQ', 'Sector 7, Business Hub, Pune - 411001',
+      'GSTIN: 27AAFCM1234A1Z5', 'Email: sales@mastermindzsportz.com', 'Phone: +91 98888 77777'], 14, 32);
+    doc.text([`Quotation #: ${quoNum}`, `Date: ${new Date(q.createdAt).toLocaleDateString()}`, 'Validity: 30 Days'], 200, 32, { align: 'right' });
+
+    let startY = 60;
+    doc.setFillColor(248, 250, 252); doc.rect(14, startY, 182, 32, 'F');
+    doc.setFontSize(10); doc.setTextColor(220, 38, 38); doc.setFont(undefined, 'bold');
+    doc.text('DELIVER TO:', 20, startY + 8);
+    doc.setFont(undefined, 'normal'); doc.setFontSize(9); doc.setTextColor(51, 65, 85);
+    let cy = startY + 15;
+    doc.text(q.customerName || 'Customer', 20, cy); cy += 5;
+    if (q.address) { doc.text(q.address, 20, cy); cy += 5; }
+    if (q.city || q.zip) { doc.text(`${q.city || ''} ${q.zip || ''}`.trim(), 20, cy); cy += 5; }
+    if (q.phone) { doc.text(`Phone: ${q.phoneCode || ''} ${q.phone}`, 20, cy); }
+
+    doc.autoTable({
+      startY: startY + 40,
+      head: [['#', 'Product', 'Unit Price', 'Qty', 'GST %', 'Line Total']],
+      body: items.map((i, idx) => [
+        (idx + 1).toString(), i.name,
+        `Rs. ${parseFloat(i.price).toFixed(2)}`,
+        String(i.qty),
+        `${parseFloat(i.gst || 0)}%`,
+        `Rs. ${(parseFloat(i.price) * parseInt(i.qty)).toFixed(2)}`
+      ]),
+      theme: 'striped',
+      headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+      columnStyles: { 0: { cellWidth: 14, halign: 'center' }, 1: { cellWidth: 70 }, 2: { cellWidth: 30, halign: 'right' }, 3: { cellWidth: 14, halign: 'center' }, 4: { cellWidth: 20, halign: 'right' }, 5: { cellWidth: 34, halign: 'right' } },
+      styles: { fontSize: 9, cellPadding: 3 }
+    });
+
+    const fy = doc.lastAutoTable.finalY + 12;
+    doc.setFontSize(10); doc.setTextColor(51, 65, 85);
+    const sx = 135, vx = 200;
+    const row = (lbl, val, y, bold = false) => {
+      doc.setFont(undefined, bold ? 'bold' : 'normal');
+      doc.text(lbl, sx, y); doc.text(val, vx, y, { align: 'right' });
+    };
+    row('Subtotal:', `Rs. ${sub.toFixed(2)}`, fy + 4);
+    row('GST Amount:', `Rs. ${gstTotal.toFixed(2)}`, fy + 12);
+    doc.setDrawColor(226, 232, 240); doc.line(sx, fy + 17, 200, fy + 17);
+    doc.setFontSize(13); doc.setTextColor(220, 38, 38);
+    row('Grand Total:', `Rs. ${grandTotal.toFixed(2)}`, fy + 27, true);
+
+    doc.setFontSize(8); doc.setFont(undefined, 'normal'); doc.setTextColor(148, 163, 184);
+    doc.text('This is a computer-generated quotation · MasterMindz Sportz Admin', 105, 285, { align: 'center' });
+    doc.save(`${quoNum}_${(q.customerName || 'Guest').replace(/\s+/g, '_')}.pdf`);
+    showToast(`${quoNum} downloaded 📄`, 'success');
+  };
+
+  const logoImg = new Image();
+  logoImg.src = 'mmz%20logo%20fin%201.png';
+  logoImg.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = logoImg.width; canvas.height = logoImg.height;
+    canvas.getContext('2d').drawImage(logoImg, 0, 0);
+    addContent(canvas.toDataURL('image/png'));
+  };
+  logoImg.onerror = () => addContent();
 }
 
 function renderAdminProducts() {
@@ -4646,16 +4923,24 @@ function buildQuickViewModal() {
       <img src="${p.image}" style="width:100%;object-fit:cover;border-radius:16px;">
       <button class="btn" style="position:absolute;top:16px;left:16px;background:white;padding:8px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1)" onclick="setState({modal:null, activeProduct:null})">✕</button>
     </div>
-    <div style="padding:40px;display:flex;flex-direction:column;justify-content:center">
+      <div style="padding:40px;display:flex;flex-direction:column;justify-content:center">
       <div style="font-size:12px;color:var(--emerald);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;font-weight:800">${p.category}</div>
       <h2 style="margin:0 0 16px;font-size:32px">${p.name}</h2>
       <div style="font-size:16px;color:#f59e0b;margin-bottom:20px">★ ${p.rating} <span style="color:var(--muted)">(${p.reviews} reviews)</span></div>
       <div style="font-size:15px;color:var(--muted);line-height:1.6;margin-bottom:24px">${p.desc}</div>
-      <div style="font-size:28px;font-weight:800;color:var(--emerald);margin-bottom:24px">₹${p.price.toFixed(2)}</div>
+      ${p.badge === 'sale' && p.salePercent > 0 ? `
+        <div style="margin-bottom:24px">
+          ${p.saleName ? `<div style="font-size:12px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">${p.saleName}</div>` : ''}
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:18px;color:var(--muted);text-decoration:line-through;font-weight:600">₹${p.price.toFixed(2)}</span>
+            <span class="badge badge-sale" style="font-size:11px">${p.salePercent}% OFF</span>
+          </div>
+          <div style="font-size:34px;font-weight:800;color:#dc2626;margin-top:4px">₹${(p.price * (1 - p.salePercent / 100)).toFixed(2)}</div>
+        </div>
+      ` : `<div style="font-size:28px;font-weight:800;color:var(--emerald);margin-bottom:24px">₹${p.price.toFixed(2)}</div>`}
       <button class="btn btn-primary" style="padding:16px;font-size:16px" onclick="addToCart('${p.id}', event); setState({modal:null, activeProduct:null})">
         <i data-lucide="shopping-cart"></i> Add to Cart
       </button>
-
     </div>
   `;
   return card;
@@ -4910,7 +5195,7 @@ function buildQuotationInfoModal() {
 function buildProductModal() {
   const p = S.activeProduct;
   const card = el('div', 'modal-card');
-  const cats = ['Cues', 'Balls', 'Tables', 'Accessories', 'Cases', 'Cloth'];
+  const cats = ['Cues', 'Tips', 'Tips Accessories', 'Balls', 'Ball Accessories', 'Cases', 'Cue Accessories', 'Cloth', 'Cloth Accessories', 'Tables', 'Table Accessories', "Player's Accessories", 'Chalk', 'Chalk Holder', 'Accessories'];
   card.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
       <h2 style="margin:0;font-size:24px">${p ? 'Edit Product' : 'Add New Product'}</h2>
@@ -4940,12 +5225,46 @@ function buildProductModal() {
       </div>
       <div>
         <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Badge</label>
-        <select class="input" id="p-badge" style="border:1px solid var(--line)">
+        <select class="input" id="p-badge" style="border:1px solid var(--line)" onchange="toggleSaleFields(this.value)">
           <option value="" ${p && !p.badge ? 'selected' : ''}>None</option>
           <option value="new" ${p && p.badge === 'new' ? 'selected' : ''}>New</option>
           <option value="bestseller" ${p && p.badge === 'bestseller' ? 'selected' : ''}>Bestseller</option>
-          <option value="sale" ${p && p.badge === 'sale' ? 'selected' : ''}>Sale</option>
+          <option value="sale" ${p && p.badge === 'sale' ? 'selected' : ''}>🏷️ Sale</option>
         </select>
+      </div>
+      <!-- Sale details panel - shown only when Sale badge selected -->
+      <div id="sale-fields" style="grid-column:1/-1;display:${p && p.badge === 'sale' ? 'block' : 'none'}">
+        <div style="background:linear-gradient(135deg,rgba(255,107,0,0.08),rgba(220,38,38,0.08));border:1.5px solid rgba(220,38,38,0.2);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-size:18px">🏷️</span>
+            <span style="font-weight:800;font-size:14px;color:#dc2626">Sale Configuration</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div>
+              <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Sale Name *</label>
+              <input class="input" id="p-sale-name" placeholder="e.g. Summer Sale, Clearance" 
+                value="${p && p.saleName ? p.saleName : ''}" 
+                style="border:1.5px solid rgba(220,38,38,0.3);background:white">
+              <span style="font-size:11px;color:var(--muted);margin-top:4px;display:block">Shown on product badge</span>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Discount % *</label>
+              <input class="input" id="p-sale-pct" type="number" min="1" max="99" placeholder="e.g. 20" 
+                value="${p && p.salePercent ? p.salePercent : ''}" 
+                style="border:1.5px solid rgba(220,38,38,0.3);background:white"
+                oninput="updateSalePreview()">
+              <span style="font-size:11px;color:var(--muted);margin-top:4px;display:block">1 – 99 %</span>
+            </div>
+          </div>
+          <div id="sale-preview" style="background:white;border-radius:10px;padding:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div style="font-size:12px;color:var(--muted);font-weight:600">PREVIEW:</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span id="sale-prev-old" style="font-size:15px;color:var(--muted);text-decoration:line-through">₹${p ? p.price.toFixed(2) : '0.00'}</span>
+              <span class="badge badge-sale" style="font-size:11px" id="sale-prev-pct">${p && p.salePercent ? p.salePercent + '% OFF' : '?% OFF'}</span>
+            </div>
+            <span id="sale-prev-new" style="font-size:20px;font-weight:800;color:#dc2626">₹${p && p.salePercent ? (p.price * (1 - p.salePercent / 100)).toFixed(2) : '0.00'}</span>
+          </div>
+        </div>
       </div>
       <div style="grid-column:1/-1">
         <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px">Product Image *</label>
@@ -5000,6 +5319,32 @@ function buildProductModal() {
   dz.ondragleave = () => { dz.style.background = '#f8fafc'; };
   dz.ondrop = (e) => { e.preventDefault(); dz.style.background = '#f8fafc'; handleFile(e.dataTransfer.files[0]); };
 
+  // Sale fields toggle
+  window.toggleSaleFields = function(val) {
+    const sf = document.getElementById('sale-fields');
+    if (sf) sf.style.display = val === 'sale' ? 'block' : 'none';
+  };
+
+  // Sale price preview
+  window.updateSalePreview = function() {
+    const priceFld = document.getElementById('p-price');
+    const pctFld = document.getElementById('p-sale-pct');
+    const nameFld = document.getElementById('p-sale-name');
+    const basePrice = parseFloat(priceFld?.value) || 0;
+    const pct = parseFloat(pctFld?.value) || 0;
+    const salePrice = basePrice * (1 - pct / 100);
+    const prevOld = document.getElementById('sale-prev-old');
+    const prevNew = document.getElementById('sale-prev-new');
+    const prevPct = document.getElementById('sale-prev-pct');
+    if (prevOld) prevOld.textContent = '₹' + basePrice.toFixed(2);
+    if (prevNew) prevNew.textContent = pct > 0 ? '₹' + salePrice.toFixed(2) : '₹0.00';
+    if (prevPct) prevPct.textContent = pct > 0 ? pct + '% OFF' : '?% OFF';
+  };
+
+  // Also update preview when price input changes
+  const priceInput = card.querySelector('#p-price');
+  if (priceInput) priceInput.addEventListener('input', () => { if (window.updateSalePreview) window.updateSalePreview(); });
+
   card.querySelector('#p-submit').addEventListener('click', doSaveProduct);
   return card;
 }
@@ -5011,25 +5356,38 @@ async function doSaveProduct() {
   const stock = parseInt(document.getElementById('p-stock')?.value);
   const gst = parseFloat(document.getElementById('p-gst')?.value);
   const badge = document.getElementById('p-badge')?.value;
-  const image = document.getElementById('p-image-data')?.value; // Now uses Base64 data
+  const image = document.getElementById('p-image-data')?.value;
   const desc = document.getElementById('p-desc')?.value.trim();
+
+  // Sale fields
+  const saleName = badge === 'sale' ? (document.getElementById('p-sale-name')?.value.trim() || '') : '';
+  const salePercent = badge === 'sale' ? (parseFloat(document.getElementById('p-sale-pct')?.value) || 0) : 0;
 
   if (!name || isNaN(price) || isNaN(stock) || isNaN(gst) || !image) {
     showToast('Please fill all required fields and upload an image', 'error');
     return;
   }
+  if (badge === 'sale' && (!saleName || salePercent <= 0 || salePercent >= 100)) {
+    showToast('For Sale badge: enter a sale name and a discount % between 1–99', 'error');
+    return;
+  }
+
+  const salePrice = badge === 'sale' && salePercent > 0 ? price * (1 - salePercent / 100) : null;
 
   const p = S.activeProduct;
   const newProd = {
     id: p ? p.id : 'p' + Date.now(),
     name, category: cat, price, stock, gst, badge, image, desc,
+    saleName: saleName || null,
+    salePercent: salePercent || null,
+    salePrice: salePrice,
     rating: p ? p.rating : 5, reviews: p ? p.reviews : 0
   };
 
   await DB.put('products', newProd);
   S.products = await DB.getAll('products');
   setState({ modal: null, activeProduct: null });
-  showToast(`Product "${name}" ${p ? 'updated' : 'added'}!`);
+  showToast(`Product "${name}" ${p ? 'updated' : 'added'}! ${ badge === 'sale' ? `🏷️ ${salePercent}% off applied.` : ''}`);
 }
 
 function buildProfileModal() {
