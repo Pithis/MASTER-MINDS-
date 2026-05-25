@@ -2,3030 +2,417 @@
 // MASTERMINDZ SPORTZ — Full-Featured E-Commerce App
 // Local DB: IndexedDB | Auth + Email Verification | Admin Panel
 // ============================================================
-
-// ── IndexedDB Layer ──────────────────────────────────────────
-const DB = (() => {
-  let db;
-  const DB_NAME = 'MastermindzSportzDB', DB_VER = 4;
-
+// Simple IndexedDB wrapper used by the app when `DB` is referenced.
+const DB = (function(){
+  let _db = null;
   function open() {
+    if (_db) return Promise.resolve(_db);
     return new Promise((res, rej) => {
-      if (db) return res(db);
-      const req = indexedDB.open(DB_NAME, DB_VER);
-      req.onupgradeneeded = e => {
-        const d = e.target.result;
-        if (!d.objectStoreNames.contains('users')) {
-          const us = d.createObjectStore('users', { keyPath: 'id', autoIncrement: true });
-          us.createIndex('email', 'email', { unique: true });
-        }
-        if (!d.objectStoreNames.contains('orders')) {
-          const os = d.createObjectStore('orders', { keyPath: 'id', autoIncrement: true });
-          os.createIndex('userId', 'userId');
-          os.createIndex('status', 'status');
-        }
-        if (!d.objectStoreNames.contains('products')) {
-          d.createObjectStore('products', { keyPath: 'id' });
-        }
-        if (!d.objectStoreNames.contains('verifications')) {
-          d.createObjectStore('verifications', { keyPath: 'email' });
-        }
-        if (!d.objectStoreNames.contains('sessions')) {
-          d.createObjectStore('sessions', { keyPath: 'token' });
-        }
-        if (!d.objectStoreNames.contains('quotations')) {
-          d.createObjectStore('quotations', { keyPath: 'id', autoIncrement: true });
+      const r = indexedDB.open('MasterMindsDB', 4);
+      r.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        const stores = ['products','users','orders','quotations'];
+        for (const s of stores) {
+          if (!db.objectStoreNames.contains(s)) {
+            const os = db.createObjectStore(s, { keyPath: 'id' });
+            if (s === 'users') os.createIndex('email', 'email', { unique: false });
+          }
         }
       };
-      req.onsuccess = e => { db = e.target.result; res(db); };
-      req.onerror = () => rej(req.error);
+      r.onsuccess = () => { _db = r.result; res(_db); };
+      r.onerror = () => rej(r.error);
     });
   }
 
-  async function getAll(store, indexName, key) {
-    const d = await open();
-    return new Promise((res, rej) => {
-      const t = d.transaction(store, 'readonly');
-      const s = t.objectStore(store);
-      const req = indexName ? s.index(indexName).getAll(key) : s.getAll();
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
-    });
+  function tx(storeName, mode='readonly'){
+    return open().then(db => db.transaction(storeName, mode).objectStore(storeName));
   }
 
-  async function get(store, key) {
-    const d = await open();
-    return new Promise((res, rej) => {
-      const t = d.transaction(store, 'readonly');
-      const req = t.objectStore(store).get(key);
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
-    });
-  }
-
-  async function put(store, val) {
-    const d = await open();
-    return new Promise((res, rej) => {
-      const t = d.transaction(store, 'readwrite');
-      const req = t.objectStore(store).put(val);
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
-    });
-  }
-
-  async function del(store, key) {
-    const d = await open();
-    return new Promise((res, rej) => {
-      const t = d.transaction(store, 'readwrite');
-      const req = t.objectStore(store).delete(key);
-      req.onsuccess = () => res();
-      req.onerror = () => rej(req.error);
-    });
-  }
-
-  async function getByIndex(store, index, key) {
-    const d = await open();
-    return new Promise((res, rej) => {
-      const t = d.transaction(store, 'readonly');
-      const req = t.objectStore(store).index(index).get(key);
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
-    });
-  }
-
-  async function clear(store) {
-    const d = await open();
-    return new Promise((res, rej) => {
-      const t = d.transaction(store, 'readwrite');
-      const req = t.objectStore(store).clear();
-      req.onsuccess = () => res();
-      req.onerror = () => rej(req.error);
-    });
-  }
-
-  return { open, put, get, del, getAll, getByIndex, clear };
-})();
-
-// ── Auth ─────────────────────────────────────────────────────
-const Auth = (() => {
-  function genToken() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
-  function genCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
-  function hashPass(p) {
-    // Better hash implementation for a client-side demo (still not production secure)
-    let h1 = 0xdeadbeef ^ p.length, h2 = 0x41c6ce57 ^ p.length;
-    for (let i = 0, ch; i < p.length; i++) {
-      ch = p.charCodeAt(i);
-      h1 = Math.imul(h1 ^ ch, 2654435761);
-      h2 = Math.imul(h2 ^ ch, 1597334677);
+  return {
+    async getAll(storeName){
+      const store = await tx(storeName,'readonly');
+      return new Promise(res => { const rq = store.getAll(); rq.onsuccess = () => res(rq.result || []); rq.onerror = () => res([]); });
+    },
+    async get(storeName, id){
+      const store = await tx(storeName,'readonly');
+      return new Promise(res => { const rq = store.get(id); rq.onsuccess = () => res(rq.result); rq.onerror = () => res(undefined); });
+    },
+    async put(storeName, obj){
+      if (!obj) throw new Error('No object provided to DB.put');
+      if (!obj.hasOwnProperty('id') || obj.id === undefined || obj.id === null) {
+        obj.id = 'auto_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+      }
+      const store = await tx(storeName,'readwrite');
+      return new Promise((res, rej) => { const rq = store.put(obj); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); });
+    },
+    async del(storeName, id){
+      const store = await tx(storeName,'readwrite');
+      return new Promise(res => { const rq = store.delete(id); rq.onsuccess = () => res(); rq.onerror = () => res(); });
+    },
+    async getByIndex(storeName, indexName, value){
+      const db = await open();
+      const txObj = db.transaction(storeName, 'readonly');
+      const store = txObj.objectStore(storeName);
+      if (store.indexNames && store.indexNames.contains(indexName)){
+        return new Promise(res => { const rq = store.index(indexName).get(value); rq.onsuccess = () => res(rq.result); rq.onerror = () => res(undefined); });
+      }
+      // fallback: scan
+      const all = await this.getAll(storeName);
+      return all.find(x => x[indexName] === value);
+    },
+    async clear(storeName){
+      const store = await tx(storeName,'readwrite');
+      return new Promise(res => { const rq = store.clear(); rq.onsuccess = () => res(); rq.onerror = () => res(); });
     }
-    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
-  }
-
-  async function currentUser() {
-    const token = localStorage.getItem('sa_token');
-    if (!token) return null;
-    const session = await DB.get('sessions', token);
-    if (!session || session.exp < Date.now()) { localStorage.removeItem('sa_token'); return null; }
-    return DB.get('users', session.userId);
-  }
-
-  async function register({ name, email, password, phone }) {
-    const exists = await DB.getByIndex('users', 'email', email);
-    if (exists) throw new Error('Email already registered');
-    const code = genCode();
-    await DB.put('verifications', {
-      email, code, exp: Date.now() + 15 * 60 * 1000,
-      name, password: hashPass(password), phone
-    });
-    return code;
-  }
-
-  async function verify(email, code) {
-    const v = await DB.get('verifications', email);
-    if (!v) throw new Error('No pending verification for this email');
-    if (v.exp < Date.now()) throw new Error('Code expired. Please register again.');
-    if (v.code !== code) throw new Error('Invalid code. Please try again.');
-    const userId = await DB.put('users', {
-      name: v.name, email, password: v.password, phone: v.phone,
-      role: 'customer', verified: true,
-      createdAt: new Date().toISOString(),
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(v.name)}&background=0f766e&color=fff`
-    });
-    await DB.del('verifications', email);
-    // Create session
-    const token = genToken();
-    await DB.put('sessions', { token, userId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
-    localStorage.setItem('sa_token', token);
-    return await DB.get('users', userId);
-  }
-
-  async function login(email, password) {
-    const user = await DB.getByIndex('users', 'email', email);
-    if (!user) throw new Error('No account found with this email');
-    if (!user.verified) throw new Error('Please verify your email first');
-    if (user.password !== hashPass(password)) throw new Error('Incorrect password');
-    const token = genToken();
-    await DB.put('sessions', { token, userId: user.id, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
-    localStorage.setItem('sa_token', token);
-    return user;
-  }
-
-  async function logout() {
-    const token = localStorage.getItem('sa_token');
-    if (token) await DB.del('sessions', token).catch(() => { });
-    localStorage.removeItem('sa_token');
-  }
-
-  return { currentUser, register, verify, login, logout, hashPass };
+  };
 })();
-// ── Google Authentication ─────────────────────────────
-async function googleLoginHandler(response) {
-  const data = JSON.parse(atob(response.credential.split('.')[1]));
-  const email = data.email;
-  const name = data.name;
-  const avatar = data.picture;
 
-  let user = await DB.getByIndex('users', 'email', email);
+function updateCartBadge(){
+  try {
+    const c = Cart.count();
+    const badge = document.getElementById('cart-badge');
+    if (badge) { badge.style.display = c ? 'flex' : 'none'; badge.textContent = c; }
+    const mobile = document.querySelector('.nav-mobile-badge');
+    if (mobile) { mobile.style.display = c ? 'flex' : 'none'; mobile.textContent = c; }
+  } catch(e) { /* ignore */ }
+}
+// Expose helpers globally for other inline handlers
+try { window.DB = DB; window.Auth = Auth; window.Cart = Cart; window.updateCartBadge = updateCartBadge; } catch(e) {}
 
-  if (!user) {
-    const userId = await DB.put('users', {
-      name, email, password: null, phone: "",
-      role: "customer", verified: true,
-      createdAt: new Date().toISOString(), avatar
-    });
-    user = await DB.get('users', userId);
-  }
+// Minimal Auth shim to satisfy app calls (register/login/verify/logout/currentUser)
+const Auth = (function(){
+  function hashPass(p){ return btoa(p || ''); }
+  return {
+    hashPass,
+    async register({name,email,password,phone}){
+      const existing = await DB.getByIndex('users','email', email);
+      if (existing) return existing.verifyCode || null;
+      const id = 'u_' + Date.now();
+      const code = String(Math.floor(1000 + Math.random()*9000));
+      const user = { id, name, email, password: hashPass(password), phone, role: 'customer', verified: false, verifyCode: code };
+      await DB.put('users', user);
+      return code;
+    },
+    async login(email, pass){
+      const u = await DB.getByIndex('users','email', email);
+      if (!u) throw new Error('User not found');
+      if (u.password !== hashPass(pass)) throw new Error('Incorrect password');
+      if (!u.verified) throw new Error('Email not verified');
+      localStorage.setItem('mm_user', u.id);
+      return u;
+    },
+    async verify(email, code){
+      const u = await DB.getByIndex('users','email', email);
+      if (!u) throw new Error('User not found');
+      if (u.verifyCode === code){ u.verified = true; delete u.verifyCode; await DB.put('users', u); return true; }
+      throw new Error('Invalid code');
+    },
+    async logout(){ localStorage.removeItem('mm_user'); },
+    async currentUser(){ const id = localStorage.getItem('mm_user'); if (!id) return null; return await DB.get('users', id); }
+  };
+})();
 
-  if (email === "tobi268820@gmail.com" && user.role !== "admin") {
-    user.role = "admin";
-    await DB.put("users", user);
-  }
-
-  const token = Auth.genToken ? Auth.genToken() : Math.random().toString(36).slice(2);
-  await DB.put('sessions', { token, userId: user.id, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
-  localStorage.setItem("sa_token", token);
-
-  S.user = user;
-  S.userOrders = await DB.getAll('orders', 'userId', user.id);
-  S.modal = null;
-  showToast("Signed in with Google 🎱");
-  render();
+// Minimal Google sign-in callback used in UI
+async function googleLoginHandler(response){
+  try {
+    const token = response && response.credential;
+    if (!token) return;
+    const parts = token.split('.');
+    const payload = JSON.parse(atob(parts[1] || ''));
+    const email = payload.email;
+    let user = await DB.getByIndex('users','email', email);
+    if (!user){ user = { id: 'u_' + Date.now(), name: payload.name || payload.email.split('@')[0], email, verified: true, role: 'customer' }; await DB.put('users', user); }
+    localStorage.setItem('mm_user', user.id);
+    if (typeof S !== 'undefined') S.user = user;
+  } catch (e){ console.warn('googleLoginHandler error', e); }
 }
 
-// ── Cart ─────────────────────────────────────────────────────
-const Cart = (() => {
-  let items = [];
-  try { items = JSON.parse(localStorage.getItem('sa_cart') || '[]'); } catch (e) { items = []; }
-  const save = () => localStorage.setItem('sa_cart', JSON.stringify(items));
-  const get = () => items;
-  const add = (product, qty = 1) => {
-    const idx = items.findIndex(i => i.id === product.id);
-    if (idx > -1) items[idx].qty += qty; else items.push({ ...product, qty });
-    save(); updateCartBadge();
+// Minimal Cart helper backed by localStorage
+const Cart = (function(){
+  const KEY = 'mm_cart';
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ return []; } }
+  function save(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); }
+  return {
+    get(){ return load(); },
+    count(){ return load().reduce((s,i)=>s + (i.qty || 1), 0); },
+    add(item){ const arr = load(); const idx = arr.findIndex(i => i.id === item.id); if (idx >= 0){ arr[idx].qty = (arr[idx].qty || 1) + (item.qty || 1); } else { arr.push(Object.assign({}, item, { qty: item.qty || 1 })); } save(arr); return arr; },
+    remove(id){ const arr = load().filter(i => i.id !== id); save(arr); return arr; },
+    update(id, qty){ const arr = load(); const idx = arr.findIndex(i => i.id === id); if (idx >= 0){ arr[idx].qty = qty; save(arr); } return arr; },
+    clear(){ save([]); },
+    subtotal(){ return load().reduce((s,i)=> s + (i.price || 0)*(i.qty || 1), 0); }
   };
-  const remove = id => { items = items.filter(i => i.id !== id); save(); updateCartBadge(); };
-  const update = (id, qty) => {
-    if (qty < 1) { remove(id); return; }
-    const idx = items.findIndex(i => i.id === id);
-    if (idx > -1) items[idx].qty = qty; save(); updateCartBadge();
-  };
-  const clear = () => { items = []; save(); updateCartBadge(); };
-  const total = () => items.reduce((s, i) => s + i.price * i.qty, 0);
-  const count = () => items.reduce((s, i) => s + i.qty, 0);
-  return { get, add, remove, update, clear, total, count };
 })();
-
-// ── Address Store ─────────────────────────────────────────────
-const AddressStore = (() => {
-  let data = { addr: '', city: '', zip: '', phoneCode: '+91', phone: '' };
-  try { data = { ...data, ...JSON.parse(localStorage.getItem('sa_addr') || '{}') }; } catch (e) { }
-  const save = (patch) => { data = { ...data, ...patch }; localStorage.setItem('sa_addr', JSON.stringify(data)); };
-  const get = () => data;
-  return { get, save };
-})();
-
-function updateCartBadge() {
-  const c = Cart.count();
-  // Desktop badge
-  const b = document.getElementById('cart-badge');
-  if (b) { b.textContent = c; b.style.display = c ? 'flex' : 'none'; }
-  // Mobile badge(s)
-  document.querySelectorAll('.nav-mobile-badge').forEach(mb => {
-    mb.textContent = c;
-    mb.style.display = c ? 'flex' : 'none';
-  });
-}
-
 // ── Seed Data ─────────────────────────────────────────────────
-const PRODUCTS = [
+const PRODUCTS = 
+  
+[
   {
-    "id": "Apex_0844",
-    "name": "(Printed Design) - Leather Case Blue With Lock 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 24,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "(Printed Design) - Leather Case Blue With Lock 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0845",
-    "name": "(Printed Design) - Leather Case Orange With Lock 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 14,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "(Printed Design) - Leather Case Orange With Lock 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0843",
-    "name": "(Printed Design) - Leather Case White With Lock 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 47,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "(Printed Design) - Leather Case White With Lock 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0825",
-    "name": "6 Holes Premium Plus Pool Cue Case Black Brown",
-    "price": 8000,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 34,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "6 Holes Premium Plus Pool Cue Case Black Brown - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0830",
-    "name": "6 Holes Premium Plus Pool Cue Case Black Red",
-    "price": 8000,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 52,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "6 Holes Premium Plus Pool Cue Case Black Red - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0829",
-    "name": "6 Holes Premium Plus Pool Cue Case Black Yellow",
-    "price": 8000,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 31,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "6 Holes Premium Plus Pool Cue Case Black Yellow - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0827",
-    "name": "6 Holes Premium Plus Pool Cue Case Sky Blue",
-    "price": 8000,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 18,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "6 Holes Premium Plus Pool Cue Case Sky Blue - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0828",
-    "name": "6 Holes Premium Plus Pool Cue Case White Black",
-    "price": 8000,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 24,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "6 Holes Premium Plus Pool Cue Case White Black - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0349",
-    "name": "Adr Pouch_Single_Black",
-    "price": 550,
-    "category": "Accessories",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 22,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Adr Pouch_Single_Black - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0297",
-    "name": "Aluminium Pocket Railing_Pack of 6_Black-Golden - Large",
-    "price": 1695,
-    "category": "Tables",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 58,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Aluminium Pocket Railing_Pack of 6_Black-Golden - Large - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0150",
-    "name": "Apex Chalk Pouch_Blue",
-    "price": 500,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 36,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0149",
-    "name": "Apex Chalk Pouch_Dark Brown",
-    "price": 500,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 53,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Dark Brown - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0148",
-    "name": "Apex Chalk Pouch_Golden",
-    "price": 500,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 55,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Golden - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0151",
-    "name": "Apex Chalk Pouch_Green",
-    "price": 500,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 37,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0145",
-    "name": "Apex Chalk Pouch_Pink",
-    "price": 381,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 53,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Pink - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0144",
-    "name": "Apex Chalk Pouch_Violet",
-    "price": 500,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 39,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Violet - Premium quality accessories equipment."
-  },
-  {
-    "id": "Pune_058",
-    "name": "Apex Leather Case_Black_1 Piece",
-    "price": 4500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 35,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Leather Case_Black_1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Pune_056",
-    "name": "Apex Leather Case_Orange_1 Piece",
-    "price": 4500,
-    "category": "Cases",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 48,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Leather Case_Orange_1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0286",
-    "name": "Apex Pocket Leather_Pack of 6_Light Brown",
-    "price": 2500,
-    "category": "Tables",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 58,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Pocket Leather_Pack of 6_Light Brown - Premium quality tables equipment."
-  },
-  {
-    "id": "9.6/17.2/57.5/50",
-    "name": "Apex Ultimate Cue_2",
-    "price": 68000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 58,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Ultimate Cue_2 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.7/17.3/57/51",
-    "name": "Apex Ultimate Cue_3",
-    "price": 68000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 25,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Ultimate Cue_3 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.6/17.1/57.5/56",
-    "name": "Apex Ultimate Cue_8",
-    "price": 68000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 40,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Ultimate Cue_8 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0890",
-    "name": "Baekland 1G Ballset",
-    "price": 30000,
+    "id": "ITEM_43",
+    "name": "Product 43",
+    "price": 200,
     "category": "Balls",
-    "stock": 1,
+    "stock": 65,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 24,
+    "reviews": 411,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Baekland 1G Ballset - Premium quality balls equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0613",
-    "name": "Ball Cleaning Machine",
-    "price": 20000,
-    "category": "Tables",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 48,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Ball Cleaning Machine - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0213",
-    "name": "Ball Position Marker",
-    "price": 350,
+    "id": "ITEM_54",
+    "name": "Product 54",
+    "price": 1500,
     "category": "Balls",
-    "stock": 5,
+    "stock": 20,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 32,
+    "reviews": 369,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Ball Position Marker - Premium quality balls equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0703",
-    "name": "Billee Chalk Single Spruce",
-    "price": 50,
-    "category": "Accessories",
-    "stock": 137,
+    "id": "ITEM_1",
+    "name": "Product 1",
+    "price": 100,
+    "category": "Cases",
+    "stock": 122,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 50,
+    "reviews": 899,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Billee Chalk Single Spruce - Premium quality accessories equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0813",
-    "name": "Billiards stick silky spray",
-    "price": 1000,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 14,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Billiards stick silky spray - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0030",
-    "name": "Blue Diamond Tip_Single Tip_10mm_Blue",
+    "id": "ITEM_32",
+    "name": "Product 32",
     "price": 250,
-    "category": "Accessories",
-    "stock": 48,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 49,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Blue Diamond Tip_Single Tip_10mm_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0406",
-    "name": "Brush Light Brown Premium - 12 Inch",
-    "price": 1500,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 47,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Brush Light Brown Premium - 12 Inch - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0267",
-    "name": "Brush_Light Brown 10.5 Inch",
-    "price": 1200,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 44,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Brush_Light Brown 10.5 Inch - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0259",
-    "name": "Case Cover Blue 3/4",
-    "price": 1200,
     "category": "Cases",
-    "stock": 2,
+    "stock": 44,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 13,
+    "reviews": 531,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Case Cover Blue 3/4 - Premium quality cases equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0261",
-    "name": "Case Cover_Black_3/4",
-    "price": 1200,
-    "category": "Cases",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 44,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Case Cover_Black_3/4 - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0567",
-    "name": "Century Pro-X Tip_Pack of 1_Hard_11mm_Blue",
-    "price": 2500,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 15,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Century Pro-X Tip_Pack of 1_Hard_11mm_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0069",
-    "name": "Century Pro-X Tip_Pack of 1_Med_11mm_Blue",
-    "price": 2500,
-    "category": "Accessories",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 18,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Century Pro-X Tip_Pack of 1_Med_11mm_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0068",
-    "name": "Century Pro-X Tip_Pack of 1_Soft_11mm_Blue",
-    "price": 2500,
-    "category": "Accessories",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 15,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Century Pro-X Tip_Pack of 1_Soft_11mm_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Pune_063",
-    "name": "Ceramic Triangle",
-    "price": 500,
-    "category": "Tables",
-    "stock": 6,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 59,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Ceramic Triangle - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0629",
-    "name": "Ceramic Triangle frame for Pool Blue + White",
-    "price": 500,
-    "category": "Tables",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 46,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Ceramic Triangle frame for Pool Blue + White - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0262",
-    "name": "Cotton Pocket Net_Pack of 6_White",
-    "price": 550,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 41,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Cotton Pocket Net_Pack of 6_White - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0457",
-    "name": "Cue Cover Black 3/4 ( Black & White strips )",
-    "price": 550,
-    "category": "Cases",
-    "stock": 4,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 19,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Cue Cover Black 3/4 ( Black & White strips ) - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0461",
-    "name": "Cue Cover with Spunch Black",
-    "price": 650,
-    "category": "Cases",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 33,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Cue Cover with Spunch Black - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0524",
-    "name": "Cue Tip Shaper",
-    "price": 100,
-    "category": "Cues",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 54,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Cue Tip Shaper - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0465",
-    "name": "Delux Billiards Towel",
-    "price": 350,
-    "category": "Cues",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 50,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Delux Billiards Towel - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0399",
-    "name": "Dyna Spehere Palladium_57.2mm",
-    "price": 24000,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 30,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Dyna Spehere Palladium_57.2mm - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0821",
-    "name": "Dynasphere Ball set Unity 57.2",
-    "price": 30000,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 53,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Dynasphere Ball set Unity 57.2 - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0810",
-    "name": "Dynaspheres English Indian Pool 52.4 Vanadium 16 balls set",
-    "price": 21000,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 13,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Dynaspheres English Indian Pool 52.4 Vanadium 16 balls set - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0805",
-    "name": "Dynaspheres Pool 57.2 Rhodium 16 balls set",
-    "price": 20000,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 17,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Dynaspheres Pool 57.2 Rhodium 16 balls set - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0806",
-    "name": "Dynaspheres Pool 57.2 Vanadium 16 balls set",
-    "price": 15000,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 21,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Dynaspheres Pool 57.2 Vanadium 16 balls set - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0011",
-    "name": "Elk Master Tip_Club_Pack of 50_9mm_Blue",
-    "price": 1000,
-    "category": "Accessories",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 34,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Elk Master Tip_Club_Pack of 50_9mm_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0434",
-    "name": "Extended Spider Head",
-    "price": 450,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 25,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Extended Spider Head - Premium quality tables equipment."
-  },
-  {
-    "id": "Pune_051",
-    "name": "Fibre Glass rest Stick",
-    "price": 1000,
-    "category": "Tables",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 46,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Fibre Glass rest Stick - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0494",
-    "name": "Gloves Black",
-    "price": 100,
-    "category": "Accessories",
-    "stock": 88,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 57,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Gloves Black - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0472",
-    "name": "Half Cue Cover Black",
-    "price": 450,
-    "category": "Cases",
-    "stock": 4,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 26,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Half Cue Cover Black - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0723",
-    "name": "Heyball Ballset A",
-    "price": 9000,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 15,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Heyball Ballset A - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0724",
-    "name": "Heyball Ballset B",
-    "price": 6000,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 16,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Heyball Ballset B - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0725",
-    "name": "Heyball Ballset C",
-    "price": 4500,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 43,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Heyball Ballset C - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0726",
-    "name": "Heyball Ballset D",
-    "price": 3500,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 44,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Heyball Ballset D - Premium quality balls equipment."
-  },
-  {
-    "id": "Pune_092",
-    "name": "Janeson 1/2 Club Cues",
-    "price": 1500,
-    "category": "Cues",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 25,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Janeson 1/2 Club Cues - Premium quality cues equipment."
-  },
-  {
-    "id": "Pune_077",
-    "name": "JDH Ball set",
-    "price": 4500,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 44,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "JDH Ball set - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0733",
-    "name": "Leather Case Basic Black With Lock 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 36,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Basic Black With Lock 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0730",
-    "name": "Leather Case Basic Black, White With Lock 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 59,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Basic Black, White With Lock 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0758",
-    "name": "Leather Case Basic Green, White With Lock 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 14,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Basic Green, White With Lock 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0836",
-    "name": "Leather Case Cover Premium Black 1 Piece",
-    "price": 1700,
-    "category": "Cases",
-    "stock": 9,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 25,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Cover Premium Black 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0761",
-    "name": "Leather Case Plain with lock Dark Green 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 28,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Plain with lock Dark Green 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0748",
-    "name": "Leather Case Plain with lock Dark Yellow 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 46,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Plain with lock Dark Yellow 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0746",
-    "name": "Leather Case Plain with lock Light Blue 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 13,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Plain with lock Light Blue 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0747",
-    "name": "Leather Case Plain with lock Light Pink 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 53,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Plain with lock Light Pink 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0757",
-    "name": "Leather Case Plain with lock Orange 1 Piece",
-    "price": 3500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 40,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Plain with lock Orange 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0740",
-    "name": "Leather Case Premium Black 1 Piece",
-    "price": 4500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 33,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Premium Black 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0741",
-    "name": "Leather Case Premium Blue, Orange, Pink, Red 1 Piece",
-    "price": 4500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 57,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Premium Blue, Orange, Pink, Red 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0735",
-    "name": "Leather Case Premium Dark Yellow 1 Piece",
-    "price": 4500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 39,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Premium Dark Yellow 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0750",
-    "name": "Leather Case Premium Green 1 Piece",
-    "price": 4500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 49,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Premium Green 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0744",
-    "name": "Leather Case Premium Plus Dark Green 62\" 1 Piece",
-    "price": 7000,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 38,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Premium Plus Dark Green 62\" 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0743",
-    "name": "Leather Case Premium Plus Dark Yellow 62\" 1 Piece",
-    "price": 7000,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 38,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Premium Plus Dark Yellow 62\" 1 Piece - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0760",
-    "name": "Leather Case Premium Red 1 Piec",
-    "price": 4500,
-    "category": "Cases",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 28,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Case Premium Red 1 Piec - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0289",
-    "name": "Leather for Upper Pocket Pack of 6_Soft_Grey",
-    "price": 2500,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 28,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather for Upper Pocket Pack of 6_Soft_Grey - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0427",
-    "name": "Leather for Upper Pocket Pack of 6_Soft_Light Brown",
-    "price": 2500,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 22,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather for Upper Pocket Pack of 6_Soft_Light Brown - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0287",
-    "name": "Leather for Upper Pocket Pack of 6_Soft_Red",
-    "price": 2500,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 50,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather for Upper Pocket Pack of 6_Soft_Red - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0534",
-    "name": "Leather Tip Protector",
-    "price": 100,
-    "category": "Cues",
-    "stock": 10,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 23,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Tip Protector - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0820",
-    "name": "Legend weilong Cue 1 piece",
-    "price": 2000,
-    "category": "Cues",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 56,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Legend weilong Cue 1 piece - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0705",
-    "name": "Legends Grain filler",
-    "price": 1500,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 11,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Legends Grain filler - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0700",
-    "name": "Long Cue",
-    "price": 850,
-    "category": "Cues",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 25,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Long Cue - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0435",
-    "name": "Long rest Head",
-    "price": 350,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 15,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Long rest Head - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0065",
-    "name": "LP Black Tips A_Single Tip_10mm_Light Green",
-    "price": 200,
-    "category": "Accessories",
-    "stock": 49,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 23,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Black Tips A_Single Tip_10mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0066",
-    "name": "LP Blue Tips B_Pack of 50_10mm_Light Green",
-    "price": 2000,
-    "category": "Accessories",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 37,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Blue Tips B_Pack of 50_10mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0493",
-    "name": "LP Classic Cue 3/4",
-    "price": 5500,
-    "category": "Cues",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 47,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Classic Cue 3/4 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0063",
-    "name": "LP Club Tips A_Pack of 50_10.5mm_Light Green",
-    "price": 1500,
-    "category": "Accessories",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 32,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Club Tips A_Pack of 50_10.5mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0062",
-    "name": "LP Club Tips B_Pack of 50_10.5mm_Blue",
-    "price": 1000,
-    "category": "Accessories",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 31,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Club Tips B_Pack of 50_10.5mm_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0049",
-    "name": "LP Dream Tip_Single Tip_Hard_10mm_Light Green",
-    "price": 2000,
-    "category": "Accessories",
-    "stock": 4,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 26,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Dream Tip_Single Tip_Hard_10mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0048",
-    "name": "LP Dream Tip_Single Tip_Med_10mm_Light Green",
-    "price": 2000,
-    "category": "Accessories",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 15,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Dream Tip_Single Tip_Med_10mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0047",
-    "name": "LP Dream Tip_Single Tip_soft_10mm_Light Green",
-    "price": 2000,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 33,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Dream Tip_Single Tip_soft_10mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0052",
-    "name": "LP Gen3 Tip_Single Tip_Hard_10.5mm_Light Green",
-    "price": 500,
-    "category": "Accessories",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 51,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Gen3 Tip_Single Tip_Hard_10.5mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0051",
-    "name": "LP Gen3 Tip_Single Tip_Med_10.5mm_Light Green",
-    "price": 500,
-    "category": "Accessories",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 14,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Gen3 Tip_Single Tip_Med_10.5mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0050",
-    "name": "LP Gen3 Tip_Single Tip_soft_10.5mm_Light Green",
-    "price": 750,
-    "category": "Accessories",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 39,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Gen3 Tip_Single Tip_soft_10.5mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0653",
-    "name": "LP HS Cue 1 Piece",
-    "price": 1700,
-    "category": "Cues",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 29,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP HS Cue 1 Piece - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0057",
-    "name": "LP Professional Tip_Pack of 6_Hard_11mm_Light Green",
+    "id": "ITEM_65",
+    "name": "Product 65",
     "price": 2400,
-    "category": "Accessories",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 54,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Professional Tip_Pack of 6_Hard_11mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0055",
-    "name": "LP Professional Tip_Pack of 6_Med_11mm_Light Green",
-    "price": 2400,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 56,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Professional Tip_Pack of 6_Med_11mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0056",
-    "name": "LP Professional Tip_Single Tip_Med_11mm_Light Green",
-    "price": 500,
-    "category": "Accessories",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 53,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Professional Tip_Single Tip_Med_11mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0054",
-    "name": "LP Professional Tip_Single Tip_soft_11mm_Light Green",
-    "price": 500,
-    "category": "Accessories",
-    "stock": 12,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 34,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Professional Tip_Single Tip_soft_11mm_Light Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0473",
-    "name": "LP White Cue 3/4",
-    "price": 3000,
-    "category": "Cues",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 45,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP White Cue 3/4 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0141",
-    "name": "Magnetic Chalk Holder_Black",
-    "price": 200,
-    "category": "Accessories",
-    "stock": 4,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 36,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Magnetic Chalk Holder_Black - Premium quality accessories equipment."
-  },
-  {
-    "id": "Pune_080",
-    "name": "Mandun Snooker Ball set",
-    "price": 5800,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 51,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Mandun Snooker Ball set - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0214",
-    "name": "Mandun Wax_50gm",
-    "price": 400,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 31,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Mandun Wax_50gm - Premium quality cues equipment."
-  },
-  {
-    "id": "Pune_082",
-    "name": "Master Min Butt 6\" Plastic",
-    "price": 750,
-    "category": "Cues",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 53,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Master Min Butt 6\" Plastic - Premium quality cues equipment."
-  },
-  {
-    "id": "8.1/17/56/41",
-    "name": "Maximus Cue Immortal - 41",
-    "price": 24000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 20,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Immortal - 41 - Premium quality cues equipment."
-  },
-  {
-    "id": "10.1/17.9/57/42",
-    "name": "Maximus Cue Immortal - 42",
-    "price": 24000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 45,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Immortal - 42 - Premium quality cues equipment."
-  },
-  {
-    "id": "10.3/17.8/57/48",
-    "name": "Maximus Cue Legend Plus - 48",
-    "price": 36000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 14,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Legend Plus - 48 - Premium quality cues equipment."
-  },
-  {
-    "id": "10/17.2/57/110",
-    "name": "Maximus Cue Precious Cue_1",
-    "price": 36000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 43,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Precious Cue_1 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.5/17.8/57/39",
-    "name": "Maximus Cue Premium - 39",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 58,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 39 - Premium quality cues equipment."
-  },
-  {
-    "id": "9/17/57/40",
-    "name": "Maximus Cue Premium - 40",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 43,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 40 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.4/17.6/57/51",
-    "name": "Maximus Cue Premium - 51",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 24,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 51 - Premium quality cues equipment."
-  },
-  {
-    "id": "10.3/17.7/57/54",
-    "name": "Maximus Cue Premium - 54",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 47,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 54 - Premium quality cues equipment."
-  },
-  {
-    "id": "10.3/18/57/56",
-    "name": "Maximus Cue Premium - 56",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 29,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 56 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.6/18/57/57",
-    "name": "Maximus Cue Premium - 57",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 23,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 57 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.1/18.3/58/O9",
-    "name": "Maximus Cue Premium 1 Piece - 09",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 37,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium 1 Piece - 09 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.1/18/56/O30",
-    "name": "Maximus Cue Premium 3/4 - 30",
-    "price": 31000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 20,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium 3/4 - 30 - Premium quality cues equipment."
-  },
-  {
-    "id": "10/17/57.5/106",
-    "name": "Maximus Cue Premium Cue_2",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 35,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium Cue_2 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.8/18.3/57/O31",
-    "name": "Maximus Legend Cue 1 Piece - 31",
-    "price": 28000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 30,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Legend Cue 1 Piece - 31 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0656",
-    "name": "Maximus Premium Cue",
-    "price": 28000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 25,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue - Premium quality cues equipment."
-  },
-  {
-    "id": "9.7/18.4/57/O23",
-    "name": "Maximus Premium Cue 1 Piece - 23",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 46,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue 1 Piece - 23 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.4/17.6/58/O29",
-    "name": "Maximus Premium Cue 1 Piece - 29",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 51,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue 1 Piece - 29 - Premium quality cues equipment."
-  },
-  {
-    "id": "Pune_111",
-    "name": "Maximus Premium Cue 3/4 Maple - Special Category",
-    "price": 28000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 10,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue 3/4 Maple - Special Category - Premium quality cues equipment."
-  },
-  {
-    "id": "9.5/17.4/57/105",
-    "name": "Maximus Premium Cue_1",
-    "price": 32000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 21,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue_1 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.2/17/57",
-    "name": "Meeshi Cue 1 Piece",
-    "price": 27000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 24,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Meeshi Cue 1 Piece - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0713",
-    "name": "Mix Color Gloves Good Quality",
-    "price": 350,
-    "category": "Cues",
-    "stock": 25,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 24,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Mix Color Gloves Good Quality - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0210",
-    "name": "MW Ball Cleaner_150ml",
-    "price": 1200,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 17,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "MW Ball Cleaner_150ml - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0812",
-    "name": "Nap setter New",
-    "price": 2000,
-    "category": "Tables",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 32,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Nap setter New - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0902",
-    "name": "Omin Aluminium Silk cue boxes",
-    "price": 5000,
     "category": "Cases",
+    "stock": 13,
+    "gst": 18,
+    "badge": "",
+    "rating": 4.5,
+    "reviews": 274,
+    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
+    "desc": "Product - Premium quality product."
+  },
+  {
+    "id": "ITEM_100",
+    "name": "Product 100",
+    "price": 200,
+    "category": "Chalk Holder",
+    "stock": 63,
+    "gst": 18,
+    "badge": "",
+    "rating": 4.5,
+    "reviews": 653,
+    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
+    "desc": "Product - Premium quality product."
+  },
+  {
+    "id": "ITEM_133",
+    "name": "Product 133",
+    "price": 85,
+    "category": "Chalk Holder",
+    "stock": 41,
+    "gst": 18,
+    "badge": "",
+    "rating": 4.5,
+    "reviews": 490,
+    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
+    "desc": "Product - Premium quality product."
+  },
+  {
+    "id": "ITEM_199",
+    "name": "Product 199",
+    "price": 1500,
+    "category": "Chalk",
+    "stock": 1,
+    "gst": 18,
+    "badge": "",
+    "rating": 4.5,
+    "reviews": 42,
+    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
+    "desc": "Product - Premium quality product."
+  },
+  {
+    "id": "ITEM_166",
+    "name": "Product 166",
+    "price": 300,
+    "category": "Cloth",
     "stock": 8,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 41,
+    "reviews": 175,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Aluminium Silk cue boxes - Premium quality cases equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0571",
-    "name": "Omin American Pool Cue 1/2",
-    "price": 25000,
-    "category": "Cues",
-    "stock": 4,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 29,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin American Pool Cue 1/2 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.7/17.9/57.5/45",
-    "name": "Omin Basic Cue_3",
-    "price": 10500,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 14,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Basic Cue_3 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.7/17.8/57.5/46",
-    "name": "Omin Basic Cue_4",
-    "price": 10500,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 41,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Basic Cue_4 - Premium quality cues equipment."
-  },
-  {
-    "id": "Pune_032",
-    "name": "Omin Chalk Holder with Cap_Black",
-    "price": 250,
-    "category": "Accessories",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 34,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Chalk Holder with Cap_Black - Premium quality accessories equipment."
-  },
-  {
-    "id": "Pune_033",
-    "name": "Omin Chalk Holder_Black Without Cap",
-    "price": 250,
-    "category": "Accessories",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 26,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Chalk Holder_Black Without Cap - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0156",
-    "name": "Omin Chalk Holder_Brown",
-    "price": 250,
-    "category": "Accessories",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 36,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Chalk Holder_Brown - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0158",
-    "name": "Omin Chalk Holder_Light Brown Without Cap",
-    "price": 350,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 38,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Chalk Holder_Light Brown Without Cap - Premium quality accessories equipment."
-  },
-  {
-    "id": "Omin_Temp_001",
-    "name": "Omin Classic Cue 3/4 ( Temp)",
-    "price": 27000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 23,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Classic Cue 3/4 ( Temp) - Premium quality cues equipment."
-  },
-  {
-    "id": "10/17.6/57/O18",
-    "name": "Omin Classic Cue 3/4 - 18",
-    "price": 26500,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 56,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Classic Cue 3/4 - 18 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0226",
-    "name": "Omin Extension (9-Inch)_Golden",
-    "price": 2000,
-    "category": "Cues",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 30,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Extension (9-Inch)_Golden - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0222",
-    "name": "Omin Extension_Black-Black",
-    "price": 4000,
-    "category": "Cues",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 23,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Extension_Black-Black - Premium quality cues equipment."
-  },
-  {
-    "id": "Pune_018",
-    "name": "Omin Extension_Black-Golden_18 Inch",
-    "price": 4000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 51,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Extension_Black-Golden_18 Inch - Premium quality cues equipment."
-  },
-  {
-    "id": "Pune_019",
-    "name": "Omin Extension_Silver_12 Inch",
-    "price": 2000,
-    "category": "Cues",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 50,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Extension_Silver_12 Inch - Premium quality cues equipment."
-  },
-  {
-    "id": "9.6/17.2/57/30",
-    "name": "Omin Imagine Cue_1",
-    "price": 42000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 20,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Imagine Cue_1 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.9/18.1/58/8",
-    "name": "Omin Master Cue_1",
-    "price": 13000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 20,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Master Cue_1 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.5/17.6/57.5/40",
-    "name": "Omin Maximum 147 Gold Cue_1",
-    "price": 46000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 45,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Maximum 147 Gold Cue_1 - Premium quality cues equipment."
-  },
-  {
-    "id": "Temp_Cue_005",
-    "name": "Omin Maximus 147_005",
-    "price": 25000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 10,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Maximus 147_005 - Premium quality cues equipment."
-  },
-  {
-    "id": "Temp_Cue_014",
-    "name": "Omin O'millenium_014",
-    "price": 25000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 47,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin O'millenium_014 - Premium quality cues equipment."
-  },
-  {
-    "id": "Temp_Cue_007",
-    "name": "Omin Perfect Golden Badge_007",
-    "price": 25000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 54,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Perfect Golden Badge_007 - Premium quality cues equipment."
-  },
-  {
-    "id": "Temp_Cue_001",
-    "name": "Omin Perfect_001",
-    "price": 25000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 48,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Perfect_001 - Premium quality cues equipment."
-  },
-  {
-    "id": "Temp_Cue_003",
-    "name": "Omin Perfect_003",
-    "price": 25000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 38,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Perfect_003 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0675",
-    "name": "Omin Premium Cue Cover 3/4",
-    "price": 2200,
-    "category": "Cases",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 50,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Premium Cue Cover 3/4 - Premium quality cases equipment."
-  },
-  {
-    "id": "Temp_Cue_013",
-    "name": "Omin Professional_013",
-    "price": 25000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 36,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Professional_013 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0033",
-    "name": "Omin Red Tip_Single Tip_10mm_Red",
-    "price": 150,
-    "category": "Accessories",
-    "stock": 50,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 11,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Red Tip_Single Tip_10mm_Red - Premium quality accessories equipment."
-  },
-  {
-    "id": "9.6/17.6/57/32",
-    "name": "Omin Ultimate Cue_1",
-    "price": 80508,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 18,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Ultimate Cue_1 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.6/17.0/57.5/34",
-    "name": "Omin Ultimate Cue_3",
-    "price": 80508,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 25,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Ultimate Cue_3 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.5/17.0/57.5/36",
-    "name": "Omin Ultimate Cue_5",
-    "price": 80508,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 43,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Ultimate Cue_5 - Premium quality cues equipment."
-  },
-  {
-    "id": "Temp_Cue_006",
-    "name": "Omin Ultimate_006",
-    "price": 25000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 53,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Ultimate_006 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0092",
-    "name": "Omin_Tip Puncture _Golden_Single Sided",
-    "price": 550,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 25,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin_Tip Puncture _Golden_Single Sided - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0091",
-    "name": "Omin_Tip Puncture _Silver_Single Sided",
-    "price": 550,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 57,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin_Tip Puncture _Silver_Single Sided - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0026",
-    "name": "Pheonix Tip_Single Tip_Med_10mm_Green",
-    "price": 200,
-    "category": "Accessories",
-    "stock": 98,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 23,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pheonix Tip_Single Tip_Med_10mm_Green - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0035",
-    "name": "Pheonix Tip_Single Tip_Med_10mm_Red",
-    "price": 200,
-    "category": "Accessories",
-    "stock": 50,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 44,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pheonix Tip_Single Tip_Med_10mm_Red - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0334",
-    "name": "Pheonix Tip_Single_Med_11mm_Blue",
-    "price": 200,
-    "category": "Accessories",
-    "stock": 33,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 49,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pheonix Tip_Single_Med_11mm_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0215",
-    "name": "Phoenix Cue Oil_30ml",
-    "price": 550,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 56,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Phoenix Cue Oil_30ml - Premium quality cues equipment."
-  },
-  {
-    "id": "9.5/18.4/57/O14",
-    "name": "Phoenix Limited Cue 1 Piece - 14",
-    "price": 38000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 30,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Phoenix Limited Cue 1 Piece - 14 - Premium quality cues equipment."
-  },
-  {
-    "id": "9.3/17.8/56/101",
-    "name": "Phoenix Unity Cue_1",
-    "price": 38000,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 46,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Phoenix Unity Cue_1 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0296",
-    "name": "Plastic Pocket Railing_Pack of 6_Black ( Snooker)",
-    "price": 847,
-    "category": "Tables",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 17,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Plastic Pocket Railing_Pack of 6_Black ( Snooker) - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0378",
-    "name": "PNS 720 / Club Snooker Cloth_6X12 feet_Green",
-    "price": 21500,
-    "category": "Cloth",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 27,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "PNS 720 / Club Snooker Cloth_6X12 feet_Green - Premium quality cloth equipment."
-  },
-  {
-    "id": "Apex_0183",
-    "name": "PNS 900 Pool Cloth_4.5X9 feet_Green",
-    "price": 9500,
-    "category": "Cloth",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 22,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "PNS 900 Pool Cloth_4.5X9 feet_Green - Premium quality cloth equipment."
-  },
-  {
-    "id": "Apex_0379",
-    "name": "PNS F5 Snooker Cloth_6X12 feet_Green",
-    "price": 24500,
-    "category": "Cloth",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 17,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "PNS F5 Snooker Cloth_6X12 feet_Green - Premium quality cloth equipment."
-  },
-  {
-    "id": "Apex_0170",
-    "name": "PNS-760 Pool Cloth_4.5X9 feet_Blue",
-    "price": 7143,
-    "category": "Cloth",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 22,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "PNS-760 Pool Cloth_4.5X9 feet_Blue - Premium quality cloth equipment."
-  },
-  {
-    "id": "Apex_0439",
-    "name": "Pool Ball Tray",
-    "price": 600,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 53,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pool Ball Tray - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0809",
-    "name": "Pool Cueball 57.2 Belgian style (6 red dots)",
-    "price": 1500,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 10,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pool Cueball 57.2 Belgian style (6 red dots) - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0808",
-    "name": "Pool Cueball 57.2 Palladium (6 black rotors)",
-    "price": 1500,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 27,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pool Cueball 57.2 Palladium (6 black rotors) - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0807",
-    "name": "Pool Cueball 57.2 Vanadium (2 black triangles)",
-    "price": 1500,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 42,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pool Cueball 57.2 Vanadium (2 black triangles) - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0355",
-    "name": "Pool Keychains Medium_Single_",
-    "price": 85,
-    "category": "Accessories",
-    "stock": 12,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 17,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pool Keychains Medium_Single_ - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0353",
-    "name": "Pool Keychains Small_Single",
-    "price": 150,
-    "category": "Accessories",
-    "stock": 22,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 13,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pool Keychains Small_Single - Premium quality accessories equipment."
-  },
-  {
-    "id": "Pune_088",
-    "name": "Railing Brush Premium",
-    "price": 900,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 48,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Railing Brush Premium - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0430",
-    "name": "Rest Head_Golden Without cap",
-    "price": 300,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 55,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Rest Head_Golden Without cap - Premium quality tables equipment."
-  },
-  {
-    "id": "Pune_093",
-    "name": "Riley Club Cues 1 Piece",
-    "price": 1250,
-    "category": "Cues",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 22,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Riley Club Cues 1 Piece - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0903",
-    "name": "Slim aluminium cue boxes with num lock",
-    "price": 5000,
-    "category": "Cases",
-    "stock": 9,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 22,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slim aluminium cue boxes with num lock - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0818",
-    "name": "Slp S1 Cue 1 piece",
-    "price": 1650,
-    "category": "Cues",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 16,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp S1 Cue 1 piece - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0815",
-    "name": "Slp S2 Cue 1 piece",
-    "price": 1650,
-    "category": "Cues",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 21,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp S2 Cue 1 piece - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0816",
-    "name": "Slp S3 Cue 1 piece",
-    "price": 1650,
-    "category": "Cues",
-    "stock": 15,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 51,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp S3 Cue 1 piece - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0817",
-    "name": "Slp T1 Cue 3/4",
-    "price": 1650,
-    "category": "Cues",
-    "stock": 4,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 41,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp T1 Cue 3/4 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0814",
-    "name": "Slp X5 Cue 3/4",
-    "price": 2000,
-    "category": "Cues",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 43,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp X5 Cue 3/4 - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0438",
-    "name": "Snooker Ball Tray",
-    "price": 700,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 39,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Snooker Ball Tray - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0811",
-    "name": "Snooker Cueball 52.4 1G",
-    "price": 1500,
-    "category": "Balls",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 13,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Snooker Cueball 52.4 1G - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0433",
-    "name": "Spider Head",
-    "price": 300,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 11,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Spider Head - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0464",
-    "name": "Stroke Exerciser",
-    "price": 1200,
-    "category": "Tables",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 37,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Stroke Exerciser - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0374",
-    "name": "SuperPool_4X8 feet_Red",
-    "price": 3000,
-    "category": "Cloth",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 19,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "SuperPool_4X8 feet_Red - Premium quality cloth equipment."
-  },
-  {
-    "id": "Pune_009",
-    "name": "Taom Chalk Pouch without Magnet",
+    "id": "ITEM_188",
+    "name": "Product 188",
     "price": 1000,
-    "category": "Accessories",
-    "stock": 6,
+    "category": "Cloth",
+    "stock": 7,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 55,
+    "reviews": 63,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Taom Chalk Pouch without Magnet - Premium quality accessories equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0303",
-    "name": "Taom Gloves_Black_Left_Small",
-    "price": 1500,
-    "category": "Accessories",
-    "stock": 2,
+    "id": "ITEM_111",
+    "name": "Product 111",
+    "price": 150,
+    "category": "Cues",
+    "stock": 83,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 31,
+    "reviews": 564,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Taom Gloves_Black_Left_Small - Premium quality accessories equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0306",
-    "name": "Taom Gloves_Black_Right_Large",
-    "price": 1500,
-    "category": "Accessories",
-    "stock": 2,
+    "id": "ITEM_122",
+    "name": "Product 122",
+    "price": 350,
+    "category": "Cues",
+    "stock": 52,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 35,
+    "reviews": 450,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Taom Gloves_Black_Right_Large - Premium quality accessories equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0305",
-    "name": "Taom Gloves_Black_Right_Medium",
-    "price": 1500,
-    "category": "Accessories",
-    "stock": 2,
+    "id": "ITEM_144",
+    "name": "Product 144",
+    "price": 150,
+    "category": "Cues",
+    "stock": 36,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 32,
+    "reviews": 440,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Taom Gloves_Black_Right_Medium - Premium quality accessories equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0112",
-    "name": "Taom Pyro Chalk_Single_Pink",
-    "price": 1500,
-    "category": "Accessories",
-    "stock": 9,
+    "id": "ITEM_155",
+    "name": "Product 155",
+    "price": 200,
+    "category": "Cues",
+    "stock": 159,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 10,
+    "reviews": 207,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Taom Pyro Chalk_Single_Pink - Premium quality accessories equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0109",
-    "name": "Taom V10 Chalk_Single_Blue",
-    "price": 1500,
-    "category": "Accessories",
-    "stock": 4,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 51,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Taom V10 Chalk_Single_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0220",
-    "name": "Telescopic Extension Aluminium Black - Gold 12 Inch",
+    "id": "ITEM_177",
+    "name": "Product 177",
     "price": 1200,
     "category": "Cues",
-    "stock": 1,
+    "stock": 20,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 17,
+    "reviews": 136,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Telescopic Extension Aluminium Black - Gold 12 Inch - Premium quality cues equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0605",
-    "name": "Telescopic Extension Aluminium Black 12 Inch",
-    "price": 1200,
+    "id": "ITEM_20",
+    "name": "Product 20",
+    "price": 50,
     "category": "Cues",
-    "stock": 1,
+    "stock": 235,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 42,
+    "reviews": 937,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Telescopic Extension Aluminium Black 12 Inch - Premium quality cues equipment."
+    "desc": "Product - Premium quality product."
   },
   {
-    "id": "Apex_0219",
-    "name": "Telescopic Extension Aluminium Black-Blue 12 Inch",
-    "price": 1200,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 25,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Telescopic Extension Aluminium Black-Blue 12 Inch - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0101",
-    "name": "Tip Sharpner",
-    "price": 80,
-    "category": "Accessories",
-    "stock": 4,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 41,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Tip Sharpner - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0125",
-    "name": "Triangle Chalk_Club_Pack of 144_Blue",
-    "price": 1500,
-    "category": "Accessories",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 16,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Triangle Chalk_Club_Pack of 144_Blue - Premium quality accessories equipment."
-  },
-  {
-    "id": "Apex_0835",
-    "name": "Tube Case 4 Holes Black White 1/2",
-    "price": 5000,
-    "category": "Cases",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 31,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Tube Case 4 Holes Black White 1/2 - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0765",
-    "name": "Tube case plain Black 3/4 - New",
-    "price": 1500,
-    "category": "Cases",
-    "stock": 4,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 20,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Tube case plain Black 3/4 - New - Premium quality cases equipment."
-  },
-  {
-    "id": "Apex_0216",
-    "name": "Volkan Cue Cleaner_20ml",
-    "price": 950,
-    "category": "Cues",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 23,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Volkan Cue Cleaner_20ml - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0522",
-    "name": "Volkan Wax 20gm",
-    "price": 850,
-    "category": "Cues",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 49,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Volkan Wax 20gm - Premium quality cues equipment."
-  },
-  {
-    "id": "Apex_0440",
-    "name": "Wall Cue Stand Wooden",
-    "price": 750,
-    "category": "Tables",
-    "stock": 3,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 32,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wall Cue Stand Wooden - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0368",
-    "name": "Wiraka 6565_5X10 feet_Green_B",
-    "price": 11500,
-    "category": "Cloth",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 18,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wiraka 6565_5X10 feet_Green_B - Premium quality cloth equipment."
-  },
-  {
-    "id": "Apex_0192",
-    "name": "Wiraka 777_4X8 feet_Green_B",
-    "price": 5800,
-    "category": "Cloth",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 44,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wiraka 777_4X8 feet_Green_B - Premium quality cloth equipment."
-  },
-  {
-    "id": "Apex_0514",
-    "name": "Wooden rest Stick Yellow",
-    "price": 800,
-    "category": "Tables",
-    "stock": 5,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 37,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wooden rest Stick Yellow - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0515",
-    "name": "Wooden rest Stick Yellow Long",
-    "price": 1400,
-    "category": "Tables",
-    "stock": 2,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 49,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wooden rest Stick Yellow Long - Premium quality tables equipment."
-  },
-  {
-    "id": "Apex_0264",
-    "name": "Wooden Score Board_Brown",
-    "price": 2500,
-    "category": "Tables",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 44,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wooden Score Board_Brown - Premium quality tables equipment."
-  },
-  {
-    "id": "Pune_079",
-    "name": "Xiguan Fabric Softnerer",
-    "price": 2000,
-    "category": "Cloth",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 30,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Xiguan Fabric Softnerer - Premium quality cloth equipment."
-  },
-  {
-    "id": "Pune_081",
-    "name": "Xing Kang Snooker Ball set",
-    "price": 5800,
-    "category": "Balls",
-    "stock": 1,
-    "gst": 18,
-    "badge": "",
-    "rating": 4.5,
-    "reviews": 44,
-    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Xing Kang Snooker Ball set - Premium quality balls equipment."
-  },
-  {
-    "id": "Apex_0495",
-    "name": "Xingpai American Pool Cue 1/2",
+    "id": "ITEM_212",
+    "name": "Product 212",
     "price": 11000,
     "category": "Cues",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
-    "reviews": 55,
+    "reviews": 49,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Xingpai American Pool Cue 1/2 - Premium quality cues equipment."
+    "desc": "Product - Premium quality product."
+  },
+  {
+    "id": "ITEM_76",
+    "name": "Product 76",
+    "price": 100,
+    "category": "Table Accessories",
+    "stock": 25,
+    "gst": 18,
+    "badge": "",
+    "rating": 4.5,
+    "reviews": 192,
+    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
+    "desc": "Product - Premium quality product."
+  },
+  {
+    "id": "ITEM_87",
+    "name": "Product 87",
+    "price": 500,
+    "category": "Tips",
+    "stock": 18,
+    "gst": 18,
+    "badge": "",
+    "rating": 4.5,
+    "reviews": 172,
+    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
+    "desc": "Product - Premium quality product."
+  },
+  {
+    "id": "ITEM_98",
+    "name": "Product 98",
+    "price": 80,
+    "category": "Tips",
+    "stock": 18,
+    "gst": 18,
+    "badge": "",
+    "rating": 4.5,
+    "reviews": 77,
+    "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
+    "desc": "Product - Premium quality product."
   }
 ];
 
 async function seedData() {
-  const existing = await DB.getAll('products');
-  
-  // If the database has fewer products than our master list, 
-  // we add the missing ones/update existing ones.
-  if (existing.length < PRODUCTS.length) {
-    for (const p of PRODUCTS) {
-      await DB.put('products', p);
-    }
+  // Always upsert products from the current `PRODUCTS` array so code changes
+  // (category fixes, prices, stock) are applied to IndexedDB.
+  for (const p of PRODUCTS) {
+    await DB.put('products', p);
   }
 
   // Ensure admin user exists
