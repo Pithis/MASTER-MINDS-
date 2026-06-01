@@ -1754,3 +1754,13 @@ select.input {
     grid-template-columns: 1fr !important;
   }
 }
+/* Shop Layout Responsiveness */
+@media (max-width: 768px) {
+  .shop-layout {
+    flex-direction: column !important;
+  }
+  .shop-sidebar {
+    width: 100% !important;
+    position: static !important;
+  }
+}

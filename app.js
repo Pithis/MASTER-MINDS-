@@ -367,7 +367,7 @@ const PRODUCTS = [
     "id": "Apex_0349",
     "name": "Adr Pouch_Single_Black",
     "price": 550,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 2,
     "gst": 18,
     "badge": "",
@@ -380,46 +380,49 @@ const PRODUCTS = [
     "id": "Apex_0297",
     "name": "Aluminium Pocket Railing_Pack of 6_Black-Golden - Large",
     "price": 1695,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 58,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Aluminium Pocket Railing_Pack of 6_Black-Golden - Large - Premium quality tables equipment."
+    "desc": "Aluminium Pocket Railing_Pack of 6_Black-Golden - Large - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0150",
     "name": "Apex Chalk Pouch_Blue",
     "price": 500,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 36,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Blue - Premium quality accessories equipment."
+    "desc": "Apex Chalk Pouch_Blue - Premium quality accessories equipment.",
+    "subCategory": "Apex"
   },
   {
     "id": "Apex_0149",
     "name": "Apex Chalk Pouch_Dark Brown",
     "price": 500,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 53,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Dark Brown - Premium quality accessories equipment."
+    "desc": "Apex Chalk Pouch_Dark Brown - Premium quality accessories equipment.",
+    "subCategory": "Apex"
   },
   {
     "id": "Apex_0148",
     "name": "Apex Chalk Pouch_Golden",
     "price": 500,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 1,
     "gst": 18,
     "badge": "",
@@ -432,20 +435,21 @@ const PRODUCTS = [
     "id": "Apex_0151",
     "name": "Apex Chalk Pouch_Green",
     "price": 500,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 37,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Green - Premium quality accessories equipment."
+    "desc": "Apex Chalk Pouch_Green - Premium quality accessories equipment.",
+    "subCategory": "Apex"
   },
   {
     "id": "Apex_0145",
     "name": "Apex Chalk Pouch_Pink",
     "price": 381,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 1,
     "gst": 18,
     "badge": "",
@@ -458,14 +462,15 @@ const PRODUCTS = [
     "id": "Apex_0144",
     "name": "Apex Chalk Pouch_Violet",
     "price": 500,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 39,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Chalk Pouch_Violet - Premium quality accessories equipment."
+    "desc": "Apex Chalk Pouch_Violet - Premium quality accessories equipment.",
+    "subCategory": "Apex"
   },
   {
     "id": "Pune_058",
@@ -497,14 +502,15 @@ const PRODUCTS = [
     "id": "Apex_0286",
     "name": "Apex Pocket Leather_Pack of 6_Light Brown",
     "price": 2500,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 58,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Pocket Leather_Pack of 6_Light Brown - Premium quality tables equipment."
+    "desc": "Apex Pocket Leather_Pack of 6_Light Brown - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "9.6/17.2/57.5/50",
@@ -517,7 +523,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 58,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Ultimate Cue_2 - Premium quality cues equipment."
+    "desc": "Apex Ultimate Cue_2 - Premium quality cues equipment.",
+    "subCategory": "Apex"
   },
   {
     "id": "9.7/17.3/57/51",
@@ -530,7 +537,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 25,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Ultimate Cue_3 - Premium quality cues equipment."
+    "desc": "Apex Ultimate Cue_3 - Premium quality cues equipment.",
+    "subCategory": "Apex"
   },
   {
     "id": "9.6/17.1/57.5/56",
@@ -543,7 +551,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 40,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Apex Ultimate Cue_8 - Premium quality cues equipment."
+    "desc": "Apex Ultimate Cue_8 - Premium quality cues equipment.",
+    "subCategory": "Apex"
   },
   {
     "id": "Apex_0890",
@@ -562,33 +571,35 @@ const PRODUCTS = [
     "id": "Apex_0613",
     "name": "Ball Cleaning Machine",
     "price": 20000,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 48,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Ball Cleaning Machine - Premium quality tables equipment."
+    "desc": "Ball Cleaning Machine - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0213",
     "name": "Ball Position Marker",
     "price": 350,
-    "category": "Balls",
+    "category": "Accessories",
     "stock": 5,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 32,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Ball Position Marker - Premium quality balls equipment."
+    "desc": "Ball Position Marker - Premium quality balls equipment.",
+    "subCategory": "Ball Accessories"
   },
   {
     "id": "Apex_0703",
     "name": "Billee Chalk Single Spruce",
     "price": 50,
-    "category": "Accessories",
+    "category": "Chalk",
     "stock": 137,
     "gst": 18,
     "badge": "",
@@ -601,53 +612,57 @@ const PRODUCTS = [
     "id": "Apex_0813",
     "name": "Billiards stick silky spray",
     "price": 1000,
-    "category": "Balls",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 14,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Billiards stick silky spray - Premium quality balls equipment."
+    "desc": "Billiards stick silky spray - Premium quality balls equipment.",
+    "subCategory": "Ball Accessories"
   },
   {
     "id": "Apex_0030",
     "name": "Blue Diamond Tip_Single Tip_10mm_Blue",
     "price": 250,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 48,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 49,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Blue Diamond Tip_Single Tip_10mm_Blue - Premium quality accessories equipment."
+    "desc": "Blue Diamond Tip_Single Tip_10mm_Blue - Premium quality accessories equipment.",
+    "subCategory": "Blue Diamond"
   },
   {
     "id": "Apex_0406",
     "name": "Brush Light Brown Premium - 12 Inch",
     "price": 1500,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 47,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Brush Light Brown Premium - 12 Inch - Premium quality tables equipment."
+    "desc": "Brush Light Brown Premium - 12 Inch - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0267",
     "name": "Brush_Light Brown 10.5 Inch",
     "price": 1200,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 44,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Brush_Light Brown 10.5 Inch - Premium quality tables equipment."
+    "desc": "Brush_Light Brown 10.5 Inch - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0259",
@@ -679,79 +694,85 @@ const PRODUCTS = [
     "id": "Apex_0567",
     "name": "Century Pro-X Tip_Pack of 1_Hard_11mm_Blue",
     "price": 2500,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 15,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Century Pro-X Tip_Pack of 1_Hard_11mm_Blue - Premium quality accessories equipment."
+    "desc": "Century Pro-X Tip_Pack of 1_Hard_11mm_Blue - Premium quality accessories equipment.",
+    "subCategory": "Century"
   },
   {
     "id": "Apex_0069",
     "name": "Century Pro-X Tip_Pack of 1_Med_11mm_Blue",
     "price": 2500,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 18,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Century Pro-X Tip_Pack of 1_Med_11mm_Blue - Premium quality accessories equipment."
+    "desc": "Century Pro-X Tip_Pack of 1_Med_11mm_Blue - Premium quality accessories equipment.",
+    "subCategory": "Century"
   },
   {
     "id": "Apex_0068",
     "name": "Century Pro-X Tip_Pack of 1_Soft_11mm_Blue",
     "price": 2500,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 15,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Century Pro-X Tip_Pack of 1_Soft_11mm_Blue - Premium quality accessories equipment."
+    "desc": "Century Pro-X Tip_Pack of 1_Soft_11mm_Blue - Premium quality accessories equipment.",
+    "subCategory": "Century"
   },
   {
     "id": "Pune_063",
     "name": "Ceramic Triangle",
     "price": 500,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 6,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 59,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Ceramic Triangle - Premium quality tables equipment."
+    "desc": "Ceramic Triangle - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0629",
     "name": "Ceramic Triangle frame for Pool Blue + White",
     "price": 500,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 46,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Ceramic Triangle frame for Pool Blue + White - Premium quality tables equipment."
+    "desc": "Ceramic Triangle frame for Pool Blue + White - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0262",
     "name": "Cotton Pocket Net_Pack of 6_White",
     "price": 550,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 41,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Cotton Pocket Net_Pack of 6_White - Premium quality tables equipment."
+    "desc": "Cotton Pocket Net_Pack of 6_White - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0457",
@@ -783,27 +804,29 @@ const PRODUCTS = [
     "id": "Apex_0524",
     "name": "Cue Tip Shaper",
     "price": 100,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 54,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Cue Tip Shaper - Premium quality cues equipment."
+    "desc": "Cue Tip Shaper - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0465",
     "name": "Delux Billiards Towel",
     "price": 350,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 50,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Delux Billiards Towel - Premium quality cues equipment."
+    "desc": "Delux Billiards Towel - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0399",
@@ -874,40 +897,43 @@ const PRODUCTS = [
     "id": "Apex_0011",
     "name": "Elk Master Tip_Club_Pack of 50_9mm_Blue",
     "price": 1000,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 34,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Elk Master Tip_Club_Pack of 50_9mm_Blue - Premium quality accessories equipment."
+    "desc": "Elk Master Tip_Club_Pack of 50_9mm_Blue - Premium quality accessories equipment.",
+    "subCategory": "ELK Master"
   },
   {
     "id": "Apex_0434",
     "name": "Extended Spider Head",
     "price": 450,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 25,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Extended Spider Head - Premium quality tables equipment."
+    "desc": "Extended Spider Head - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Pune_051",
     "name": "Fibre Glass rest Stick",
     "price": 1000,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 5,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 46,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Fibre Glass rest Stick - Premium quality tables equipment."
+    "desc": "Fibre Glass rest Stick - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0494",
@@ -920,7 +946,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 57,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Gloves Black - Premium quality accessories equipment."
+    "desc": "Gloves Black - Premium quality accessories equipment.",
+    "subCategory": "Player Accessories"
   },
   {
     "id": "Apex_0472",
@@ -998,7 +1025,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 25,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Janeson 1/2 Club Cues - Premium quality cues equipment."
+    "desc": "Janeson 1/2 Club Cues - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Pune_077",
@@ -1011,7 +1039,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 44,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "JDH Ball set - Premium quality balls equipment."
+    "desc": "JDH Ball set - Premium quality balls equipment.",
+    "subCategory": "JDH"
   },
   {
     "id": "Apex_0733",
@@ -1225,53 +1254,57 @@ const PRODUCTS = [
     "id": "Apex_0289",
     "name": "Leather for Upper Pocket Pack of 6_Soft_Grey",
     "price": 2500,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 28,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather for Upper Pocket Pack of 6_Soft_Grey - Premium quality tables equipment."
+    "desc": "Leather for Upper Pocket Pack of 6_Soft_Grey - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0427",
     "name": "Leather for Upper Pocket Pack of 6_Soft_Light Brown",
     "price": 2500,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 22,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather for Upper Pocket Pack of 6_Soft_Light Brown - Premium quality tables equipment."
+    "desc": "Leather for Upper Pocket Pack of 6_Soft_Light Brown - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0287",
     "name": "Leather for Upper Pocket Pack of 6_Soft_Red",
     "price": 2500,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 50,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather for Upper Pocket Pack of 6_Soft_Red - Premium quality tables equipment."
+    "desc": "Leather for Upper Pocket Pack of 6_Soft_Red - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0534",
     "name": "Leather Tip Protector",
     "price": 100,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 10,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 23,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Leather Tip Protector - Premium quality cues equipment."
+    "desc": "Leather Tip Protector - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0820",
@@ -1284,20 +1317,22 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 56,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Legend weilong Cue 1 piece - Premium quality cues equipment."
+    "desc": "Legend weilong Cue 1 piece - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Apex_0705",
     "name": "Legends Grain filler",
     "price": 1500,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 11,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Legends Grain filler - Premium quality cues equipment."
+    "desc": "Legends Grain filler - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0700",
@@ -1310,46 +1345,50 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 25,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Long Cue - Premium quality cues equipment."
+    "desc": "Long Cue - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Apex_0435",
     "name": "Long rest Head",
     "price": 350,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 15,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Long rest Head - Premium quality tables equipment."
+    "desc": "Long rest Head - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0065",
     "name": "LP Black Tips A_Single Tip_10mm_Light Green",
     "price": 200,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 49,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 23,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Black Tips A_Single Tip_10mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Black Tips A_Single Tip_10mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0066",
     "name": "LP Blue Tips B_Pack of 50_10mm_Light Green",
     "price": 2000,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 37,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Blue Tips B_Pack of 50_10mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Blue Tips B_Pack of 50_10mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0493",
@@ -1362,111 +1401,120 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 47,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Classic Cue 3/4 - Premium quality cues equipment."
+    "desc": "LP Classic Cue 3/4 - Premium quality cues equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0063",
     "name": "LP Club Tips A_Pack of 50_10.5mm_Light Green",
     "price": 1500,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 32,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Club Tips A_Pack of 50_10.5mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Club Tips A_Pack of 50_10.5mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0062",
     "name": "LP Club Tips B_Pack of 50_10.5mm_Blue",
     "price": 1000,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 31,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Club Tips B_Pack of 50_10.5mm_Blue - Premium quality accessories equipment."
+    "desc": "LP Club Tips B_Pack of 50_10.5mm_Blue - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0049",
     "name": "LP Dream Tip_Single Tip_Hard_10mm_Light Green",
     "price": 2000,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 4,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 26,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Dream Tip_Single Tip_Hard_10mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Dream Tip_Single Tip_Hard_10mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0048",
     "name": "LP Dream Tip_Single Tip_Med_10mm_Light Green",
     "price": 2000,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 15,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Dream Tip_Single Tip_Med_10mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Dream Tip_Single Tip_Med_10mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0047",
     "name": "LP Dream Tip_Single Tip_soft_10mm_Light Green",
     "price": 2000,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 33,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Dream Tip_Single Tip_soft_10mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Dream Tip_Single Tip_soft_10mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0052",
     "name": "LP Gen3 Tip_Single Tip_Hard_10.5mm_Light Green",
     "price": 500,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 51,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Gen3 Tip_Single Tip_Hard_10.5mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Gen3 Tip_Single Tip_Hard_10.5mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0051",
     "name": "LP Gen3 Tip_Single Tip_Med_10.5mm_Light Green",
     "price": 500,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 14,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Gen3 Tip_Single Tip_Med_10.5mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Gen3 Tip_Single Tip_Med_10.5mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0050",
     "name": "LP Gen3 Tip_Single Tip_soft_10.5mm_Light Green",
     "price": 750,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 39,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Gen3 Tip_Single Tip_soft_10.5mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Gen3 Tip_Single Tip_soft_10.5mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0653",
@@ -1479,59 +1527,64 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 29,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP HS Cue 1 Piece - Premium quality cues equipment."
+    "desc": "LP HS Cue 1 Piece - Premium quality cues equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0057",
     "name": "LP Professional Tip_Pack of 6_Hard_11mm_Light Green",
     "price": 2400,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 54,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Professional Tip_Pack of 6_Hard_11mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Professional Tip_Pack of 6_Hard_11mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0055",
     "name": "LP Professional Tip_Pack of 6_Med_11mm_Light Green",
     "price": 2400,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 56,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Professional Tip_Pack of 6_Med_11mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Professional Tip_Pack of 6_Med_11mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0056",
     "name": "LP Professional Tip_Single Tip_Med_11mm_Light Green",
     "price": 500,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 5,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 53,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Professional Tip_Single Tip_Med_11mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Professional Tip_Single Tip_Med_11mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0054",
     "name": "LP Professional Tip_Single Tip_soft_11mm_Light Green",
     "price": 500,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 12,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 34,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP Professional Tip_Single Tip_soft_11mm_Light Green - Premium quality accessories equipment."
+    "desc": "LP Professional Tip_Single Tip_soft_11mm_Light Green - Premium quality accessories equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0473",
@@ -1544,13 +1597,14 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 45,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "LP White Cue 3/4 - Premium quality cues equipment."
+    "desc": "LP White Cue 3/4 - Premium quality cues equipment.",
+    "subCategory": "LP"
   },
   {
     "id": "Apex_0141",
     "name": "Magnetic Chalk Holder_Black",
     "price": 200,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 4,
     "gst": 18,
     "badge": "",
@@ -1576,27 +1630,29 @@ const PRODUCTS = [
     "id": "Apex_0214",
     "name": "Mandun Wax_50gm",
     "price": 400,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 31,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Mandun Wax_50gm - Premium quality cues equipment."
+    "desc": "Mandun Wax_50gm - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Pune_082",
-    "name": "Master Min Butt 6\" Plastic",
+    "name": "Master Min Butt 6\\\" Plastic",
     "price": 750,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 5,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 53,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Master Min Butt 6\" Plastic - Premium quality cues equipment."
+    "desc": "Master Min Butt 6\" Plastic - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "8.1/17/56/41",
@@ -1609,7 +1665,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 20,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Immortal - 41 - Premium quality cues equipment."
+    "desc": "Maximus Cue Immortal - 41 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "10.1/17.9/57/42",
@@ -1622,7 +1679,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 45,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Immortal - 42 - Premium quality cues equipment."
+    "desc": "Maximus Cue Immortal - 42 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "10.3/17.8/57/48",
@@ -1635,7 +1693,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 14,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Legend Plus - 48 - Premium quality cues equipment."
+    "desc": "Maximus Cue Legend Plus - 48 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "10/17.2/57/110",
@@ -1648,7 +1707,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 43,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Precious Cue_1 - Premium quality cues equipment."
+    "desc": "Maximus Cue Precious Cue_1 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9.5/17.8/57/39",
@@ -1661,7 +1721,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 58,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 39 - Premium quality cues equipment."
+    "desc": "Maximus Cue Premium - 39 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9/17/57/40",
@@ -1674,7 +1735,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 43,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 40 - Premium quality cues equipment."
+    "desc": "Maximus Cue Premium - 40 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9.4/17.6/57/51",
@@ -1687,7 +1749,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 24,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 51 - Premium quality cues equipment."
+    "desc": "Maximus Cue Premium - 51 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "10.3/17.7/57/54",
@@ -1700,7 +1763,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 47,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 54 - Premium quality cues equipment."
+    "desc": "Maximus Cue Premium - 54 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "10.3/18/57/56",
@@ -1713,7 +1777,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 29,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 56 - Premium quality cues equipment."
+    "desc": "Maximus Cue Premium - 56 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9.6/18/57/57",
@@ -1726,7 +1791,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 23,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium - 57 - Premium quality cues equipment."
+    "desc": "Maximus Cue Premium - 57 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9.1/18.3/58/O9",
@@ -1752,7 +1818,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 20,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium 3/4 - 30 - Premium quality cues equipment."
+    "desc": "Maximus Cue Premium 3/4 - 30 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "10/17/57.5/106",
@@ -1765,7 +1832,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 35,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Cue Premium Cue_2 - Premium quality cues equipment."
+    "desc": "Maximus Cue Premium Cue_2 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9.8/18.3/57/O31",
@@ -1778,7 +1846,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 30,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Legend Cue 1 Piece - 31 - Premium quality cues equipment."
+    "desc": "Maximus Legend Cue 1 Piece - 31 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "Apex_0656",
@@ -1791,7 +1860,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 25,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue - Premium quality cues equipment."
+    "desc": "Maximus Premium Cue - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9.7/18.4/57/O23",
@@ -1804,7 +1874,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 46,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue 1 Piece - 23 - Premium quality cues equipment."
+    "desc": "Maximus Premium Cue 1 Piece - 23 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9.4/17.6/58/O29",
@@ -1817,7 +1888,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 51,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue 1 Piece - 29 - Premium quality cues equipment."
+    "desc": "Maximus Premium Cue 1 Piece - 29 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "Pune_111",
@@ -1830,7 +1902,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 10,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue 3/4 Maple - Special Category - Premium quality cues equipment."
+    "desc": "Maximus Premium Cue 3/4 Maple - Special Category - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9.5/17.4/57/105",
@@ -1843,7 +1916,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 21,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Maximus Premium Cue_1 - Premium quality cues equipment."
+    "desc": "Maximus Premium Cue_1 - Premium quality cues equipment.",
+    "subCategory": "Maximus"
   },
   {
     "id": "9.2/17/57",
@@ -1856,46 +1930,50 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 24,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Meeshi Cue 1 Piece - Premium quality cues equipment."
+    "desc": "Meeshi Cue 1 Piece - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Apex_0713",
     "name": "Mix Color Gloves Good Quality",
     "price": 350,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 25,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 24,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Mix Color Gloves Good Quality - Premium quality cues equipment."
+    "desc": "Mix Color Gloves Good Quality - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0210",
     "name": "MW Ball Cleaner_150ml",
     "price": 1200,
-    "category": "Balls",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 17,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "MW Ball Cleaner_150ml - Premium quality balls equipment."
+    "desc": "MW Ball Cleaner_150ml - Premium quality balls equipment.",
+    "subCategory": "Ball Accessories"
   },
   {
     "id": "Apex_0812",
     "name": "Nap setter New",
     "price": 2000,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 32,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Nap setter New - Premium quality tables equipment."
+    "desc": "Nap setter New - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0902",
@@ -1921,7 +1999,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 29,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin American Pool Cue 1/2 - Premium quality cues equipment."
+    "desc": "Omin American Pool Cue 1/2 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "9.7/17.9/57.5/45",
@@ -1934,7 +2013,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 14,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Basic Cue_3 - Premium quality cues equipment."
+    "desc": "Omin Basic Cue_3 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "9.7/17.8/57.5/46",
@@ -1947,13 +2027,14 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 41,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Basic Cue_4 - Premium quality cues equipment."
+    "desc": "Omin Basic Cue_4 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Pune_032",
     "name": "Omin Chalk Holder with Cap_Black",
     "price": 250,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 2,
     "gst": 18,
     "badge": "",
@@ -1966,7 +2047,7 @@ const PRODUCTS = [
     "id": "Pune_033",
     "name": "Omin Chalk Holder_Black Without Cap",
     "price": 250,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 2,
     "gst": 18,
     "badge": "",
@@ -1979,7 +2060,7 @@ const PRODUCTS = [
     "id": "Apex_0156",
     "name": "Omin Chalk Holder_Brown",
     "price": 250,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 5,
     "gst": 18,
     "badge": "",
@@ -1992,7 +2073,7 @@ const PRODUCTS = [
     "id": "Apex_0158",
     "name": "Omin Chalk Holder_Light Brown Without Cap",
     "price": 350,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 1,
     "gst": 18,
     "badge": "",
@@ -2003,7 +2084,7 @@ const PRODUCTS = [
   },
   {
     "id": "Omin_Temp_001",
-    "name": "Omin Classic Cue 3/4 ( Temp)",
+    "name": "Omin Classic Cue 3/4 (Temp)",
     "price": 27000,
     "category": "Cues",
     "stock": 1,
@@ -2012,7 +2093,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 23,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Classic Cue 3/4 ( Temp) - Premium quality cues equipment."
+    "desc": "Omin Classic Cue 3/4 ( Temp) - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "10/17.6/57/O18",
@@ -2025,59 +2107,64 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 56,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Classic Cue 3/4 - 18 - Premium quality cues equipment."
+    "desc": "Omin Classic Cue 3/4 - 18 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Apex_0226",
     "name": "Omin Extension (9-Inch)_Golden",
     "price": 2000,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 30,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Extension (9-Inch)_Golden - Premium quality cues equipment."
+    "desc": "Omin Extension (9-Inch)_Golden - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0222",
     "name": "Omin Extension_Black-Black",
     "price": 4000,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 23,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Extension_Black-Black - Premium quality cues equipment."
+    "desc": "Omin Extension_Black-Black - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Pune_018",
     "name": "Omin Extension_Black-Golden_18 Inch",
     "price": 4000,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 51,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Extension_Black-Golden_18 Inch - Premium quality cues equipment."
+    "desc": "Omin Extension_Black-Golden_18 Inch - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Pune_019",
     "name": "Omin Extension_Silver_12 Inch",
     "price": 2000,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 50,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Extension_Silver_12 Inch - Premium quality cues equipment."
+    "desc": "Omin Extension_Silver_12 Inch - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "9.6/17.2/57/30",
@@ -2090,7 +2177,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 20,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Imagine Cue_1 - Premium quality cues equipment."
+    "desc": "Omin Imagine Cue_1 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "9.9/18.1/58/8",
@@ -2103,7 +2191,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 20,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Master Cue_1 - Premium quality cues equipment."
+    "desc": "Omin Master Cue_1 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "9.5/17.6/57.5/40",
@@ -2116,7 +2205,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 45,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Maximum 147 Gold Cue_1 - Premium quality cues equipment."
+    "desc": "Omin Maximum 147 Gold Cue_1 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Temp_Cue_005",
@@ -2129,7 +2219,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 10,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Maximus 147_005 - Premium quality cues equipment."
+    "desc": "Omin Maximus 147_005 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Temp_Cue_014",
@@ -2142,7 +2233,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 47,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin O'millenium_014 - Premium quality cues equipment."
+    "desc": "Omin O'millenium_014 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Temp_Cue_007",
@@ -2155,7 +2247,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 54,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Perfect Golden Badge_007 - Premium quality cues equipment."
+    "desc": "Omin Perfect Golden Badge_007 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Temp_Cue_001",
@@ -2168,7 +2261,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 48,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Perfect_001 - Premium quality cues equipment."
+    "desc": "Omin Perfect_001 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Temp_Cue_003",
@@ -2181,7 +2275,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 38,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Perfect_003 - Premium quality cues equipment."
+    "desc": "Omin Perfect_003 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Apex_0675",
@@ -2207,20 +2302,22 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 36,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Professional_013 - Premium quality cues equipment."
+    "desc": "Omin Professional_013 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Apex_0033",
     "name": "Omin Red Tip_Single Tip_10mm_Red",
     "price": 150,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 50,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 11,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Red Tip_Single Tip_10mm_Red - Premium quality accessories equipment."
+    "desc": "Omin Red Tip_Single Tip_10mm_Red - Premium quality accessories equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "9.6/17.6/57/32",
@@ -2233,7 +2330,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 18,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Ultimate Cue_1 - Premium quality cues equipment."
+    "desc": "Omin Ultimate Cue_1 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "9.6/17.0/57.5/34",
@@ -2246,7 +2344,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 25,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Ultimate Cue_3 - Premium quality cues equipment."
+    "desc": "Omin Ultimate Cue_3 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "9.5/17.0/57.5/36",
@@ -2272,11 +2371,12 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 53,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin Ultimate_006 - Premium quality cues equipment."
+    "desc": "Omin Ultimate_006 - Premium quality cues equipment.",
+    "subCategory": "Omin"
   },
   {
     "id": "Apex_0092",
-    "name": "Omin_Tip Puncture _Golden_Single Sided",
+    "name": "Omin_Tip Puncture_Golden_Single Sided",
     "price": 550,
     "category": "Accessories",
     "stock": 1,
@@ -2285,11 +2385,12 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 25,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin_Tip Puncture _Golden_Single Sided - Premium quality accessories equipment."
+    "desc": "Omin_Tip Puncture _Golden_Single Sided - Premium quality accessories equipment.",
+    "subCategory": "Tip Accessories"
   },
   {
     "id": "Apex_0091",
-    "name": "Omin_Tip Puncture _Silver_Single Sided",
+    "name": "Omin_Tip Puncture_Silver_Single Sided",
     "price": 550,
     "category": "Accessories",
     "stock": 1,
@@ -2298,59 +2399,64 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 57,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Omin_Tip Puncture _Silver_Single Sided - Premium quality accessories equipment."
+    "desc": "Omin_Tip Puncture _Silver_Single Sided - Premium quality accessories equipment.",
+    "subCategory": "Tip Accessories"
   },
   {
     "id": "Apex_0026",
-    "name": "Pheonix Tip_Single Tip_Med_10mm_Green",
+    "name": "Phoenix Tip_Single Tip_Med_10mm_Green",
     "price": 200,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 98,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 23,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pheonix Tip_Single Tip_Med_10mm_Green - Premium quality accessories equipment."
+    "desc": "Phoenix Tip_Single Tip_Med_10mm_Green - Premium quality accessories equipment.",
+    "subCategory": "Phoenix"
   },
   {
     "id": "Apex_0035",
-    "name": "Pheonix Tip_Single Tip_Med_10mm_Red",
+    "name": "Phoenix Tip_Single Tip_Med_10mm_Red",
     "price": 200,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 50,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 44,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pheonix Tip_Single Tip_Med_10mm_Red - Premium quality accessories equipment."
+    "desc": "Phoenix Tip_Single Tip_Med_10mm_Red - Premium quality accessories equipment.",
+    "subCategory": "Phoenix"
   },
   {
     "id": "Apex_0334",
-    "name": "Pheonix Tip_Single_Med_11mm_Blue",
+    "name": "Phoenix Tip_Single Tip_Med_11mm_Blue",
     "price": 200,
-    "category": "Accessories",
+    "category": "Tips",
     "stock": 33,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 49,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pheonix Tip_Single_Med_11mm_Blue - Premium quality accessories equipment."
+    "desc": "Phoenix Tip_Single_Med_11mm_Blue - Premium quality accessories equipment.",
+    "subCategory": "Phoenix"
   },
   {
     "id": "Apex_0215",
     "name": "Phoenix Cue Oil_30ml",
     "price": 550,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 56,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Phoenix Cue Oil_30ml - Premium quality cues equipment."
+    "desc": "Phoenix Cue Oil_30ml - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "9.5/18.4/57/O14",
@@ -2363,7 +2469,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 30,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Phoenix Limited Cue 1 Piece - 14 - Premium quality cues equipment."
+    "desc": "Phoenix Limited Cue 1 Piece - 14 - Premium quality cues equipment.",
+    "subCategory": "Phoenix"
   },
   {
     "id": "9.3/17.8/56/101",
@@ -2376,20 +2483,22 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 46,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Phoenix Unity Cue_1 - Premium quality cues equipment."
+    "desc": "Phoenix Unity Cue_1 - Premium quality cues equipment.",
+    "subCategory": "Phoenix"
   },
   {
     "id": "Apex_0296",
     "name": "Plastic Pocket Railing_Pack of 6_Black ( Snooker)",
     "price": 847,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 17,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Plastic Pocket Railing_Pack of 6_Black ( Snooker) - Premium quality tables equipment."
+    "desc": "Plastic Pocket Railing_Pack of 6_Black ( Snooker) - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0378",
@@ -2402,7 +2511,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 27,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "PNS 720 / Club Snooker Cloth_6X12 feet_Green - Premium quality cloth equipment."
+    "desc": "PNS 720 / Club Snooker Cloth_6X12 feet_Green - Premium quality cloth equipment.",
+    "subCategory": "PNS"
   },
   {
     "id": "Apex_0183",
@@ -2415,7 +2525,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 22,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "PNS 900 Pool Cloth_4.5X9 feet_Green - Premium quality cloth equipment."
+    "desc": "PNS 900 Pool Cloth_4.5X9 feet_Green - Premium quality cloth equipment.",
+    "subCategory": "PNS"
   },
   {
     "id": "Apex_0379",
@@ -2428,7 +2539,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 17,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "PNS F5 Snooker Cloth_6X12 feet_Green - Premium quality cloth equipment."
+    "desc": "PNS F5 Snooker Cloth_6X12 feet_Green - Premium quality cloth equipment.",
+    "subCategory": "PNS"
   },
   {
     "id": "Apex_0170",
@@ -2441,20 +2553,22 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 22,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "PNS-760 Pool Cloth_4.5X9 feet_Blue - Premium quality cloth equipment."
+    "desc": "PNS-760 Pool Cloth_4.5X9 feet_Blue - Premium quality cloth equipment.",
+    "subCategory": "PNS"
   },
   {
     "id": "Apex_0439",
     "name": "Pool Ball Tray",
     "price": 600,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 53,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pool Ball Tray - Premium quality tables equipment."
+    "desc": "Pool Ball Tray - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0809",
@@ -2506,7 +2620,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 17,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pool Keychains Medium_Single_ - Premium quality accessories equipment."
+    "desc": "Pool Keychains Medium_Single_ - Premium quality accessories equipment.",
+    "subCategory": "Player Accessories"
   },
   {
     "id": "Apex_0353",
@@ -2519,33 +2634,36 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 13,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Pool Keychains Small_Single - Premium quality accessories equipment."
+    "desc": "Pool Keychains Small_Single - Premium quality accessories equipment.",
+    "subCategory": "Player Accessories"
   },
   {
     "id": "Pune_088",
     "name": "Railing Brush Premium",
     "price": 900,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 48,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Railing Brush Premium - Premium quality tables equipment."
+    "desc": "Railing Brush Premium - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0430",
     "name": "Rest Head_Golden Without cap",
     "price": 300,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 55,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Rest Head_Golden Without cap - Premium quality tables equipment."
+    "desc": "Rest Head_Golden Without cap - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Pune_093",
@@ -2558,7 +2676,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 22,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Riley Club Cues 1 Piece - Premium quality cues equipment."
+    "desc": "Riley Club Cues 1 Piece - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Apex_0903",
@@ -2584,7 +2703,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 16,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp S1 Cue 1 piece - Premium quality cues equipment."
+    "desc": "Slp S1 Cue 1 piece - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Apex_0815",
@@ -2597,7 +2717,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 21,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp S2 Cue 1 piece - Premium quality cues equipment."
+    "desc": "Slp S2 Cue 1 piece - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Apex_0816",
@@ -2610,7 +2731,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 51,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp S3 Cue 1 piece - Premium quality cues equipment."
+    "desc": "Slp S3 Cue 1 piece - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Apex_0817",
@@ -2623,7 +2745,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 41,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp T1 Cue 3/4 - Premium quality cues equipment."
+    "desc": "Slp T1 Cue 3/4 - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Apex_0814",
@@ -2636,20 +2759,22 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 43,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Slp X5 Cue 3/4 - Premium quality cues equipment."
+    "desc": "Slp X5 Cue 3/4 - Premium quality cues equipment.",
+    "subCategory": "All Brands"
   },
   {
     "id": "Apex_0438",
     "name": "Snooker Ball Tray",
     "price": 700,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 39,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Snooker Ball Tray - Premium quality tables equipment."
+    "desc": "Snooker Ball Tray - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0811",
@@ -2668,27 +2793,29 @@ const PRODUCTS = [
     "id": "Apex_0433",
     "name": "Spider Head",
     "price": 300,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 11,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Spider Head - Premium quality tables equipment."
+    "desc": "Spider Head - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0464",
     "name": "Stroke Exerciser",
     "price": 1200,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 37,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Stroke Exerciser - Premium quality tables equipment."
+    "desc": "Stroke Exerciser - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0374",
@@ -2701,13 +2828,14 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 19,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "SuperPool_4X8 feet_Red - Premium quality cloth equipment."
+    "desc": "SuperPool_4X8 feet_Red - Premium quality cloth equipment.",
+    "subCategory": "Super Pool"
   },
   {
     "id": "Pune_009",
     "name": "Taom Chalk Pouch without Magnet",
     "price": 1000,
-    "category": "Accessories",
+    "category": "Chalk Holder",
     "stock": 6,
     "gst": 18,
     "badge": "",
@@ -2727,7 +2855,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 31,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Taom Gloves_Black_Left_Small - Premium quality accessories equipment."
+    "desc": "Taom Gloves_Black_Left_Small - Premium quality accessories equipment.",
+    "subCategory": "Player Accessories"
   },
   {
     "id": "Apex_0306",
@@ -2740,7 +2869,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 35,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Taom Gloves_Black_Right_Large - Premium quality accessories equipment."
+    "desc": "Taom Gloves_Black_Right_Large - Premium quality accessories equipment.",
+    "subCategory": "Player Accessories"
   },
   {
     "id": "Apex_0305",
@@ -2753,13 +2883,14 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 32,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Taom Gloves_Black_Right_Medium - Premium quality accessories equipment."
+    "desc": "Taom Gloves_Black_Right_Medium - Premium quality accessories equipment.",
+    "subCategory": "Player Accessories"
   },
   {
     "id": "Apex_0112",
     "name": "Taom Pyro Chalk_Single_Pink",
     "price": 1500,
-    "category": "Accessories",
+    "category": "Chalk",
     "stock": 9,
     "gst": 18,
     "badge": "",
@@ -2772,7 +2903,7 @@ const PRODUCTS = [
     "id": "Apex_0109",
     "name": "Taom V10 Chalk_Single_Blue",
     "price": 1500,
-    "category": "Accessories",
+    "category": "Chalk",
     "stock": 4,
     "gst": 18,
     "badge": "",
@@ -2785,40 +2916,43 @@ const PRODUCTS = [
     "id": "Apex_0220",
     "name": "Telescopic Extension Aluminium Black - Gold 12 Inch",
     "price": 1200,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 17,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Telescopic Extension Aluminium Black - Gold 12 Inch - Premium quality cues equipment."
+    "desc": "Telescopic Extension Aluminium Black - Gold 12 Inch - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0605",
     "name": "Telescopic Extension Aluminium Black 12 Inch",
     "price": 1200,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 42,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Telescopic Extension Aluminium Black 12 Inch - Premium quality cues equipment."
+    "desc": "Telescopic Extension Aluminium Black 12 Inch - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0219",
     "name": "Telescopic Extension Aluminium Black-Blue 12 Inch",
     "price": 1200,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 25,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Telescopic Extension Aluminium Black-Blue 12 Inch - Premium quality cues equipment."
+    "desc": "Telescopic Extension Aluminium Black-Blue 12 Inch - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0101",
@@ -2831,13 +2965,14 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 41,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Tip Sharpner - Premium quality accessories equipment."
+    "desc": "Tip Sharpner - Premium quality accessories equipment.",
+    "subCategory": "Tip Accessories"
   },
   {
     "id": "Apex_0125",
     "name": "Triangle Chalk_Club_Pack of 144_Blue",
     "price": 1500,
-    "category": "Accessories",
+    "category": "Chalk",
     "stock": 1,
     "gst": 18,
     "badge": "",
@@ -2876,40 +3011,43 @@ const PRODUCTS = [
     "id": "Apex_0216",
     "name": "Volkan Cue Cleaner_20ml",
     "price": 950,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 23,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Volkan Cue Cleaner_20ml - Premium quality cues equipment."
+    "desc": "Volkan Cue Cleaner_20ml - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0522",
     "name": "Volkan Wax 20gm",
     "price": 850,
-    "category": "Cues",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 49,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Volkan Wax 20gm - Premium quality cues equipment."
+    "desc": "Volkan Wax 20gm - Premium quality cues equipment.",
+    "subCategory": "Cue Accessories"
   },
   {
     "id": "Apex_0440",
     "name": "Wall Cue Stand Wooden",
     "price": 750,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 3,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 32,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wall Cue Stand Wooden - Premium quality tables equipment."
+    "desc": "Wall Cue Stand Wooden - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0368",
@@ -2922,7 +3060,8 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 18,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wiraka 6565_5X10 feet_Green_B - Premium quality cloth equipment."
+    "desc": "Wiraka 6565_5X10 feet_Green_B - Premium quality cloth equipment.",
+    "subCategory": "Wiraka"
   },
   {
     "id": "Apex_0192",
@@ -2935,59 +3074,64 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 44,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wiraka 777_4X8 feet_Green_B - Premium quality cloth equipment."
+    "desc": "Wiraka 777_4X8 feet_Green_B - Premium quality cloth equipment.",
+    "subCategory": "Wiraka"
   },
   {
     "id": "Apex_0514",
     "name": "Wooden rest Stick Yellow",
     "price": 800,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 5,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 37,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wooden rest Stick Yellow - Premium quality tables equipment."
+    "desc": "Wooden rest Stick Yellow - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0515",
     "name": "Wooden rest Stick Yellow Long",
     "price": 1400,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 2,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 49,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wooden rest Stick Yellow Long - Premium quality tables equipment."
+    "desc": "Wooden rest Stick Yellow Long - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Apex_0264",
     "name": "Wooden Score Board_Brown",
     "price": 2500,
-    "category": "Tables",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 44,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Wooden Score Board_Brown - Premium quality tables equipment."
+    "desc": "Wooden Score Board_Brown - Premium quality tables equipment.",
+    "subCategory": "Table Accessories"
   },
   {
     "id": "Pune_079",
     "name": "Xiguan Fabric Softnerer",
     "price": 2000,
-    "category": "Cloth",
+    "category": "Accessories",
     "stock": 1,
     "gst": 18,
     "badge": "",
     "rating": 4.5,
     "reviews": 30,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Xiguan Fabric Softnerer - Premium quality cloth equipment."
+    "desc": "Xiguan Fabric Softnerer - Premium quality cloth equipment.",
+    "subCategory": "Cloth Accessories"
   },
   {
     "id": "Pune_081",
@@ -3013,7 +3157,17 @@ const PRODUCTS = [
     "rating": 4.5,
     "reviews": 55,
     "image": "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&q=80",
-    "desc": "Xingpai American Pool Cue 1/2 - Premium quality cues equipment."
+    "desc": "Xingpai American Pool Cue 1/2 - Premium quality cues equipment.",
+    "subCategory": "All Brands"
+  },
+  {
+    "id": "9.1/18.3/58/09",
+    "name": "Maximus Cue Premium 1 Piece - 09",
+    "price": 32000,
+    "stock": 1,
+    "category": "Cues",
+    "subCategory": "Maximus",
+    "image": "https://via.placeholder.com/300x200.png?text=Cues"
   }
 ];
 
@@ -3022,7 +3176,7 @@ async function seedData() {
   
   // If the database has fewer products than our master list, 
   // we add the missing ones/update existing ones.
-  if (existing.length < PRODUCTS.length) {
+  if (true || existing.length < PRODUCTS.length) {
     for (const p of PRODUCTS) {
       await DB.put('products', p);
     }
@@ -3369,8 +3523,8 @@ function productCardHTML(p) {
       <div class="product-body">
         <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px">${p.category}</div>
         <div class="product-title">${p.name}</div>
-        <div style="font-size:12px;color:#f59e0b;margin:4px 0">${stars} <span style="color:var(--muted)">(${p.reviews})</span></div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">${p.desc.slice(0, 72)}…</div>
+        <div style="font-size:12px;color:#f59e0b;margin:4px 0">${stars} <span style="color:var(--muted)">(${p.reviews || 0})</span></div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">${(p.desc || '').slice(0, 72)}…</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           ${priceHTML}
           ${qty > 0 ? `
@@ -3411,17 +3565,11 @@ const SHOP_CATEGORIES = [
   { label: 'Chalk Holder', key: 'Chalk Holder', subs: [] },
   { label: 'Cues', key: 'Cues', subs: ['All Brands', 'LP', 'Omin', 'Apex', 'Maximus', 'Phoenix'] },
   { label: 'Tips', key: 'Tips', subs: ['All Brands', 'LP', 'Phoenix', 'Blue Diamond', 'Taom', 'ELK Master', 'Century', 'Hi Chrome', 'Mark Shelby', 'Master', 'Omin'] },
-  { label: 'Tips Accessories', key: 'Tips Accessories', subs: [] },
   { label: 'Ball Set', key: 'Balls', subs: ['All Brands', 'Aramith', 'Chinese', 'JDH', 'Saphire', 'Dyna Sphere', 'Baekeland', 'Unity'] },
-  { label: 'Ball Accessories', key: 'Ball Accessories', subs: [] },
   { label: 'Cue Cases & Covers', key: 'Cases', subs: [] },
-  { label: 'Cue Accessories', key: 'Cue Accessories', subs: [] },
   { label: 'Cloth', key: 'Cloth', subs: ['All Brands', 'PNS', 'Strachan', 'Super Pool', 'Wiraka'] },
-  { label: "Player's Accessories", key: "Player's Accessories", subs: ['All', 'Gloves', 'Towel'] },
-  { label: 'Table Accessories', key: 'Table Accessories', subs: ['All', 'Triangle', 'Table Cover', 'LED Light', 'Ball Tray', 'Iron Box'] },
   { label: 'Tables', key: 'Tables', subs: ['All Types', 'Snooker Table', 'Pool Table', 'Foosball Table', 'Mini Snooker Table', 'American Pool'] },
-  { label: 'Cloth Accessories', key: 'Cloth Accessories', subs: [] },
-  { label: 'Accessories', key: 'Accessories', subs: [] },
+  { label: 'Accessories', key: 'Accessories', subs: ['All', 'Cue Accessories', 'Cloth Accessories', 'Player Accessories', 'Table Accessories', 'Ball Accessories', 'Tip Accessories'] },
 ];
 
 // ── Shop ──────────────────────────────────────────────────────
@@ -3429,49 +3577,159 @@ function renderShop() {
   const wrap = el('div', 'container section');
   const prods = S.products || [];
   const f = S.shopFilter || 'All';
-  const sub = S.shopSubFilter || 'All';
+  
+  // Initialize state variables if missing
+  if (S.shopMaxPrice === undefined) S.shopMaxPrice = '';
+  if (S.shopBrands === undefined) S.shopBrands = [];
+  if (S.shopSort === undefined) S.shopSort = 'default';
 
   // Main category filter
   const catDef = SHOP_CATEGORIES.find(c => c.key === f) || SHOP_CATEGORIES[0];
   let filtered = f === 'All' ? prods : prods.filter(p => p.category === f);
 
-  // Sub-category filter (name-based search within filtered set)
-  const activeSub = sub;
-  if (catDef.subs.length > 0 && activeSub !== 'All' && activeSub !== 'All Brands' && activeSub !== 'All Types' && activeSub !== 'All') {
-    filtered = filtered.filter(p => p.name.toLowerCase().includes(activeSub.toLowerCase()) || (p.desc && p.desc.toLowerCase().includes(activeSub.toLowerCase())));
+  // Determine dynamic brands for the sidebar
+  // We use the category's predefined sub-categories, except 'All', 'All Brands', 'All Types'
+  const availableBrands = catDef.subs.filter(s => s !== 'All' && s !== 'All Brands' && s !== 'All Types');
+
+  // Brand Filtering (via Checkboxes)
+  if (S.shopBrands.length > 0) {
+    filtered = filtered.filter(p => {
+       return S.shopBrands.some(b => 
+         (p.subCategory && p.subCategory.toLowerCase() === b.toLowerCase()) ||
+         p.name.toLowerCase().includes(b.toLowerCase()) || 
+         (p.desc && p.desc.toLowerCase().includes(b.toLowerCase()))
+       );
+    });
   }
 
-  // Build sub-filter row HTML
-  const subTabsHTML = catDef.subs.length > 0 ? `
-    <div class="shop-subfilter-tabs">
-      ${catDef.subs.map(s => `<button class="shop-subfilter-btn ${activeSub === s ? 'active' : ''}" onclick="setShopSubFilter('${s}')">${s}</button>`).join('')}
-    </div>` : '';
+  // Determine max category price for slider
+  const catProds = f === 'All' ? prods : prods.filter(p => p.category === f);
+  const maxCategoryPrice = Math.max(1000, ...catProds.map(p => p.price));
+
+  // Price Range Filtering
+  if (S.shopMaxPrice !== '') {
+    filtered = filtered.filter(p => p.price <= parseFloat(S.shopMaxPrice));
+  }
+
+  // Sorting
+  if (S.shopSort === 'price-asc') filtered.sort((a,b) => a.price - b.price);
+  else if (S.shopSort === 'price-desc') filtered.sort((a,b) => b.price - a.price);
+  else if (S.shopSort === 'az') filtered.sort((a,b) => a.name.localeCompare(b.name));
+  else if (S.shopSort === 'za') filtered.sort((a,b) => b.name.localeCompare(a.name));
 
   wrap.innerHTML = `
-    <div class="shop-header-row">
+    <div class="shop-header-row" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;">
       <div>
         <h2 class="title">Shop All Products</h2>
-        <p class="subtitle">${filtered.length} product${filtered.length !== 1 ? 's' : ''} found${f !== 'All' ? ` in <strong>${catDef.label}</strong>` : ''}${activeSub !== 'All' && activeSub !== 'All Brands' && activeSub !== 'All Types' ? ` &mdash; <em>${activeSub}</em>` : ''}</p>
+        <p class="subtitle">${filtered.length} product${filtered.length !== 1 ? 's' : ''} found${f !== 'All' ? ` in <strong>${catDef.label}</strong>` : ''}</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 14px; font-weight: 600;">Sort By:</span>
+        <select class="input" style="padding: 8px 12px; border-radius: 8px; width: 180px; font-size: 14px; cursor: pointer;" onchange="updateShopSort(this.value)">
+          <option value="default" ${S.shopSort === 'default' ? 'selected' : ''}>Recommended</option>
+          <option value="price-asc" ${S.shopSort === 'price-asc' ? 'selected' : ''}>Price: Low to High</option>
+          <option value="price-desc" ${S.shopSort === 'price-desc' ? 'selected' : ''}>Price: High to Low</option>
+          <option value="az" ${S.shopSort === 'az' ? 'selected' : ''}>A - Z</option>
+          <option value="za" ${S.shopSort === 'za' ? 'selected' : ''}>Z - A</option>
+        </select>
       </div>
     </div>
-    <div class="shop-filter-section">
-      <div class="shop-filter-tabs">
-        ${SHOP_CATEGORIES.map(c => `<button class="shop-filter-btn ${f === c.key ? 'active' : ''}" onclick="setShopFilter('${c.key}')">${c.label}</button>`).join('')}
+    
+    <div class="shop-layout" style="display: flex; gap: 32px; align-items: flex-start; position: relative;">
+      
+      <!-- Sidebar Filters -->
+      <aside class="shop-sidebar" style="width: 260px; flex-shrink: 0; background: #fff; padding: 24px; border-radius: 16px; border: 1px solid var(--line); position: sticky; top: 100px;">
+        
+        <!-- Category Selection -->
+        <div style="margin-bottom: 24px;">
+          <h4 style="margin: 0 0 12px; font-size: 16px; color: var(--text);">Categories</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${SHOP_CATEGORIES.map(c => `
+              <button style="text-align: left; background: none; border: none; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 14px; color: ${f === c.key ? 'var(--emerald)' : 'var(--muted)'}; font-weight: ${f === c.key ? '700' : '500'}; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.color='var(--text)'" onmouseout="this.style.background='none'; this.style.color='${f === c.key ? 'var(--emerald)' : 'var(--muted)'}'" onclick="setShopFilter('${c.key}')">
+                ${c.label}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--line); margin: 24px 0;">
+
+        <!-- Price Range -->
+        <!-- Price Range -->
+        <div style="margin-bottom: 24px;">
+          <h4 style="margin: 0 0 12px; font-size: 16px; color: var(--text); display:flex; justify-content:space-between;">
+            <span>Max Price</span>
+            <span style="color:var(--emerald)">₹<span id="price-display">${S.shopMaxPrice || maxCategoryPrice}</span></span>
+          </h4>
+          <input type="range" id="shop-max-price" min="0" max="${maxCategoryPrice}" step="100" value="${S.shopMaxPrice || maxCategoryPrice}" oninput="document.getElementById('price-display').innerText=this.value" onchange="applyPriceFilter()" style="width: 100%; accent-color: var(--emerald); cursor: pointer;">
+        </div>
+
+        <!-- Dynamic Brand / Sub-category Filters -->
+        ${availableBrands.length > 0 ? `
+          <hr style="border: 0; border-top: 1px solid var(--line); margin: 24px 0;">
+          <div style="margin-bottom: 24px;">
+            <h4 style="margin: 0 0 12px; font-size: 16px; color: var(--text);">${f === 'Accessories' ? 'Types' : 'Brands'}</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px; max-height: 240px; overflow-y: auto; padding-right: 8px;">
+              ${availableBrands.map(b => `
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: var(--muted); transition: color 0.2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+                  <input type="checkbox" value="${b}" ${S.shopBrands.includes(b) ? 'checked' : ''} onchange="toggleShopBrand('${b}')" style="accent-color: var(--emerald); width: 16px; height: 16px; cursor: pointer;">
+                  ${b}
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Reset Button -->
+        ${(S.shopMaxPrice || S.shopBrands.length > 0 || S.shopSort !== 'default') ? `
+          <hr style="border: 0; border-top: 1px solid var(--line); margin: 24px 0;">
+          <button class="btn btn-outline" style="width: 100%; padding: 8px; font-size: 13px; color: #dc2626; border-color: #fca5a5;" onclick="resetShopFilters()">Reset Filters</button>
+        ` : ''}
+        
+      </aside>
+
+      <!-- Main Product Grid -->
+      <div style="flex: 1; min-width: 0;">
+        <div class="grid grid-3 puzzle-grid" id="shop-grid">
+          ${filtered.length ? filtered.map(productCardHTML).join('') : '<div style="grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--muted);background:#f8fafc;border-radius:24px;border:1px dashed #cbd5e1"><div style="font-size:56px;margin-bottom:16px">🔍</div><h3 style="margin:0 0 8px">No products found</h3><p style="margin:0">Try adjusting your filters or search criteria</p></div>'}
+        </div>
       </div>
-      ${subTabsHTML}
+      
     </div>
-    <div class="grid grid-3 puzzle-grid" id="shop-grid" style="position:relative;margin-top:28px">${filtered.length ? filtered.map(productCardHTML).join('') : '<div style="grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--muted)"><div style="font-size:56px;margin-bottom:16px">🔍</div><h3 style="margin:0 0 8px">No products found</h3><p style="margin:0">Try selecting a different category or sub-category</p></div>'}</div>`;
+  `;
   return wrap;
 }
 
 function setShopFilter(f) {
   S.shopFilter = f;
-  S.shopSubFilter = 'All';
+  S.shopBrands = []; // reset brands on category change
   render();
 }
 
-function setShopSubFilter(s) {
-  S.shopSubFilter = s;
+function applyPriceFilter() {
+  const max = document.getElementById('shop-max-price').value;
+  S.shopMaxPrice = max;
+  render();
+}
+
+function toggleShopBrand(brand) {
+  if (S.shopBrands.includes(brand)) {
+    S.shopBrands = S.shopBrands.filter(b => b !== brand);
+  } else {
+    S.shopBrands.push(brand);
+  }
+  render();
+}
+
+function updateShopSort(sortVal) {
+  S.shopSort = sortVal;
+  render();
+}
+
+function resetShopFilters() {
+  S.shopMaxPrice = '';
+  S.shopBrands = [];
+  S.shopSort = 'default';
   render();
 }
 
@@ -4942,8 +5200,8 @@ function buildQuickViewModal() {
       <div style="padding:40px;display:flex;flex-direction:column;justify-content:center">
       <div style="font-size:12px;color:var(--emerald);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;font-weight:800">${p.category}</div>
       <h2 style="margin:0 0 16px;font-size:32px">${p.name}</h2>
-      <div style="font-size:16px;color:#f59e0b;margin-bottom:20px">★ ${p.rating} <span style="color:var(--muted)">(${p.reviews} reviews)</span></div>
-      <div style="font-size:15px;color:var(--muted);line-height:1.6;margin-bottom:24px">${p.desc}</div>
+      <div style="font-size:16px;color:#f59e0b;margin-bottom:20px">★ ${p.rating || 5.0} <span style="color:var(--muted)">(${p.reviews || 0} reviews)</span></div>
+      <div style="font-size:15px;color:var(--muted);line-height:1.6;margin-bottom:24px">${p.desc || ''}</div>
       ${p.badge === 'sale' && p.salePercent > 0 ? `
         <div style="margin-bottom:24px">
           ${p.saleName ? `<div style="font-size:12px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">${p.saleName}</div>` : ''}
@@ -5211,7 +5469,7 @@ function buildQuotationInfoModal() {
 function buildProductModal() {
   const p = S.activeProduct;
   const card = el('div', 'modal-card');
-  const cats = ['Cues', 'Tips', 'Tips Accessories', 'Balls', 'Ball Accessories', 'Cases', 'Cue Accessories', 'Cloth', 'Cloth Accessories', 'Tables', 'Table Accessories', "Player's Accessories", 'Chalk', 'Chalk Holder', 'Accessories'];
+  const cats = ["Cases & Covers","Accessories","Table Accessories","Chalk & Holders","Cues","Balls & Sets","Tips & Accessories","Player's Accessories","Cue Accessories","Ball Accessories","Cloth"];
   card.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
       <h2 style="margin:0;font-size:24px">${p ? 'Edit Product' : 'Add New Product'}</h2>
