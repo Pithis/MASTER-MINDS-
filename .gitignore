@@ -1,0 +1,4 @@
+node_modules/
+server/database/*.db
+snooker.db
+.env
